@@ -12,3 +12,4 @@ yarn-error.log*
 pnpm-debug.log*
 
 src-tauri/target/
+src-tauri/src/
