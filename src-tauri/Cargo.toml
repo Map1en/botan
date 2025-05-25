@@ -18,6 +18,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+botan_server = { path = "../server" }
+
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-http = "2.4.4"

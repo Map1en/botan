@@ -1,18 +1,9 @@
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use tauri_plugin_http::reqwest::header::{AUTHORIZATION, CONTENT_TYPE, SET_COOKIE, USER_AGENT};
-use tauri_plugin_http::reqwest::Client as HttpClient;
-
-pub(crate) use crate::models::{AuthContext, VrcCurrentUser, VrcErrorResponse};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT, SET_COOKIE};
+use reqwest::Client;
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api/1";
-
-fn encode_vrchat_credentials(username: &str, password: &str) -> String {
-    let encoded_username = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
-    let encoded_password = utf8_percent_encode(password, NON_ALPHANUMERIC).to_string();
-    let combined = format!("{}:{}", encoded_username, encoded_password);
-    BASE64_STANDARD.encode(combined)
-}
 
 #[derive(Debug)]
 pub struct AuthError {
@@ -33,6 +24,15 @@ impl std::fmt::Display for AuthError {
 impl std::error::Error for AuthError {}
 
 
+pub(crate) use crate::models::{AuthContext, VrcCurrentUser, VrcErrorResponse};
+
+fn encode_vrchat_credentials(username: &str, password: &str) -> String {
+    let encoded_username = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
+    let encoded_password = utf8_percent_encode(password, NON_ALPHANUMERIC).to_string();
+    let combined = format!("{}:{}", encoded_username, encoded_password);
+    BASE64_STANDARD.encode(combined)
+}
+
 fn extract_auth_cookie_value(
     response_headers: &reqwest::header::HeaderMap,
 ) -> Option<String> {
@@ -52,9 +52,7 @@ fn extract_auth_cookie_value(
     None
 }
 
-
 pub async fn authenticate_with_vrchat_credentials(
-    http_client: &HttpClient,
     username: &str,
     password: &str,
 ) -> Result<AuthContext, AuthError> {
@@ -67,7 +65,12 @@ pub async fn authenticate_with_vrchat_credentials(
     let crate_name = env!("CARGO_PKG_NAME");
     let crate_version = env!("CARGO_PKG_VERSION");
 
-    let request_builder = http_client
+    let client = Client::builder().build().map_err(|e| AuthError {
+        message: e.to_string(),
+        auth_cookie_value: None,
+    })?;
+
+    let request_builder = client
         .get(&request_url)
         .header(AUTHORIZATION, auth_header_value)
         .header(CONTENT_TYPE, "application/json;charset=utf-8")
@@ -85,7 +88,7 @@ pub async fn authenticate_with_vrchat_credentials(
             let extracted_cookie_opt: Option<String> = extract_auth_cookie_value(&response_headers_clone);
 
             if response_status == 200 {
-                let body_bytes = match response.bytes().await {
+                let body_bytes= match response.bytes().await {
                     Ok(b) => b,
                     Err(e) => {
                         let base_msg = format!("Failed to read response body: {}", e);
@@ -96,7 +99,7 @@ pub async fn authenticate_with_vrchat_credentials(
                         });
                     }
                 };
-                
+
                 match serde_json::from_slice::<VrcCurrentUser>(&body_bytes) {
                     Ok(current_user) => {
                         log::info!("Login successful (status 200, user data parsed) for user: {}", username);
@@ -125,7 +128,7 @@ pub async fn authenticate_with_vrchat_credentials(
                         })
                     }
                 }
-            } else { 
+            } else {
                 let error_body_bytes = response.bytes().await.unwrap_or_default();
 
                 match serde_json::from_slice::<VrcErrorResponse>(&error_body_bytes) {
@@ -155,7 +158,7 @@ pub async fn authenticate_with_vrchat_credentials(
                 }
             }
         }
-        Err(http_error) => { 
+        Err(http_error) => {
             let base_msg = format!("HTTP request error: {:?}", http_error);
             log::error!("{:#?} (Auth Cookie not available as the request itself failed)", AuthError{message: base_msg.clone(), auth_cookie_value: None});
             Err(AuthError {

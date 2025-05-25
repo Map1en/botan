@@ -1,6 +1,4 @@
 pub mod commands;
-pub mod core_logic;
-pub mod models;
 
 use commands::auth_user;
 
