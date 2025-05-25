@@ -24,7 +24,11 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": [".next/types/**/*.ts", "src", "dist/types/**/*.ts"],
   "references": [
