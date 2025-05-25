@@ -27,14 +27,14 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["next/*"]
     }
   },
-  "include": [".next/types/**/*.ts", "src", "dist/types/**/*.ts"],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
+  "include": [
+    ".next/types/**/*.ts",
+    "dist/types/**/*.ts",
+    "next",
+    "../dist/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
