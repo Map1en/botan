@@ -18,7 +18,7 @@ export default function Page() {
 
   async function login(info: { username: string; password: string }) {
     try {
-      const result = await invoke('mock_login', {
+      const result = await invoke('auth_user', {
         credentials: {
           username: info.username,
           password: info.password,

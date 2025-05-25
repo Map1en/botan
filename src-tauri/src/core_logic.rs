@@ -1,9 +1,9 @@
-pub(crate) use crate::models::{AuthContext, VrcCurrentUser, VrcErrorResponse};
-
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use tauri_plugin_http::reqwest::header::{AUTHORIZATION, CONTENT_TYPE, SET_COOKIE, USER_AGENT};
 use tauri_plugin_http::reqwest::Client as HttpClient;
+
+pub(crate) use crate::models::{AuthContext, VrcCurrentUser, VrcErrorResponse};
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api/1";
 
@@ -14,31 +14,52 @@ fn encode_vrchat_credentials(username: &str, password: &str) -> String {
     BASE64_STANDARD.encode(combined)
 }
 
-//
+#[derive(Debug)]
+pub struct AuthError {
+    pub message: String,
+    pub auth_cookie_value: Option<String>,
+}
+
+impl std::fmt::Display for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(cookie) = &self.auth_cookie_value {
+            write!(f, "{} (Auth Cookie found: {})", self.message, cookie)
+        } else {
+            write!(f, "{} (No valid Auth Cookie found in headers)", self.message)
+        }
+    }
+}
+
+impl std::error::Error for AuthError {}
+
+
 fn extract_auth_cookie_value(
     response_headers: &reqwest::header::HeaderMap,
 ) -> Option<String> {
     for header_value in response_headers.get_all(SET_COOKIE) {
         if let Ok(cookie_str) = header_value.to_str() {
             if let Some(auth_part) = cookie_str
-                .split(";")
-                .find(|part| part.trim().starts_with("auth="))
+                .split(';')
+                .map(|part| part.trim())
+                .find(|part| part.starts_with("auth="))
             {
-                return auth_part.trim().strip_prefix("auth=").map(String::from);
+                return auth_part.strip_prefix("auth=")
+                    .map(String::from)
+                    .filter(|s| !s.is_empty());
             }
         }
     }
     None
 }
 
+
 pub async fn authenticate_with_vrchat_credentials(
     http_client: &HttpClient,
     username: &str,
     password: &str,
-) -> Result<AuthContext, String> {
+) -> Result<AuthContext, AuthError> {
     let encoded_credentials = encode_vrchat_credentials(username, password);
     let auth_header_value = format!("Basic {}", encoded_credentials);
-
     let request_url = format!("{}/auth/user", VRCHAT_API_BASE_URL);
 
     log::info!("Attempting login for user: {}", username);
@@ -46,77 +67,101 @@ pub async fn authenticate_with_vrchat_credentials(
     let crate_name = env!("CARGO_PKG_NAME");
     let crate_version = env!("CARGO_PKG_VERSION");
 
-    let request = http_client
-        .get(request_url.clone())
+    let request_builder = http_client
+        .get(&request_url)
         .header(AUTHORIZATION, auth_header_value)
         .header(CONTENT_TYPE, "application/json;charset=utf-8")
         .header(USER_AGENT, format!("{} v{}", crate_name, crate_version));
 
-    match request.send().await {
+    match request_builder.send().await {
         Ok(response) => {
             log::debug!("API response status: {}", response.status());
             log::debug!("API response headers: {:?}", response.headers());
 
             let response_status = response.status().as_u16();
-            let respose_headers = response.headers().clone();
+
+            let response_headers_clone = response.headers().clone();
+
+            let extracted_cookie_opt: Option<String> = extract_auth_cookie_value(&response_headers_clone);
 
             if response_status == 200 {
-                let body_bytes = response.bytes().await.map_err(|e| {
-                    log::error!("Failed to read response body: {}", e);
-                    "Failed to read response body".to_string()
-                })?;
+                let body_bytes = match response.bytes().await {
+                    Ok(b) => b,
+                    Err(e) => {
+                        let base_msg = format!("Failed to read response body: {}", e);
+                        log::error!("{:#?}", AuthError { message: base_msg.clone(), auth_cookie_value: extracted_cookie_opt.clone() });
+                        return Err(AuthError {
+                            message: base_msg,
+                            auth_cookie_value: extracted_cookie_opt,
+                        });
+                    }
+                };
+                
                 match serde_json::from_slice::<VrcCurrentUser>(&body_bytes) {
                     Ok(current_user) => {
-                        log::info!("Login successful for user: {}", username);
-
-                        if let Some(auth_cookie_value) = extract_auth_cookie_value(&respose_headers)
-                        {
-                            log::info!("Auth cookie value extracted");
+                        log::info!("Login successful (status 200, user data parsed) for user: {}", username);
+                        if let Some(auth_cookie_value) = extracted_cookie_opt {
+                            log::info!("Valid auth cookie successfully extracted for user: {}.", username);
                             Ok(AuthContext {
                                 user: current_user,
                                 auth_cookie_value,
                             })
                         } else {
-                            log::error!("Auth cookie not found in response headers");
-                            Err("Auth cookie not found in response headers".to_string())
+                            let base_msg = "Auth cookie not found or invalid in response headers despite 200 OK.";
+                            log::error!("{:#?}", AuthError { message: base_msg.to_string(), auth_cookie_value: None }); // extracted_cookie_opt is None here
+                            Err(AuthError {
+                                message: base_msg.to_string(),
+                                auth_cookie_value: None,
+                            })
                         }
                     }
                     Err(e) => {
-                        log::error!("200 Ok, Failed to parse auth cookie: {}", e);
-                        Err(format!("200 Ok, Failed to parse auth cookie: {}", e))
+                        let body_str_for_log = String::from_utf8_lossy(&body_bytes);
+                        let base_msg = format!("200 OK, but failed to parse user data: {}. Body was: '{}'", e, body_str_for_log);
+                        log::error!("{:#?}", AuthError { message: base_msg.clone(), auth_cookie_value: extracted_cookie_opt.clone() });
+                        Err(AuthError {
+                            message: base_msg,
+                            auth_cookie_value: extracted_cookie_opt,
+                        })
                     }
                 }
-            } else {
+            } else { 
                 let error_body_bytes = response.bytes().await.unwrap_or_default();
+
                 match serde_json::from_slice::<VrcErrorResponse>(&error_body_bytes) {
                     Ok(error_response) => {
-                        log::warn!(
-                            "VRChat API error ({}): {}",
-                            error_response.error.status_code,
-                            error_response.error.message
-                        );
-                        Err(format!(
+                        let base_msg = format!(
                             "VRChat API error ({}): {}",
                             error_response.error.status_code, error_response.error.message
-                        ))
-                    }
-                    Err(_) => {
-                        log::warn!(
-                            "VRChat API returned status {} with non-JSON error body.",
-                            response_status
                         );
-                        let _ = String::from_utf8_lossy(&error_body_bytes);
-                        Err(format!(
-                            "VRChat API returned status {} with non-JSON error body.",
-                            response_status
-                        ))
+                        log::warn!("{:#?}", AuthError { message: base_msg.clone(), auth_cookie_value: extracted_cookie_opt.clone() });
+                        Err(AuthError {
+                            message: base_msg,
+                            auth_cookie_value: extracted_cookie_opt,
+                        })
+                    }
+                    Err(parse_err) => {
+                        let body_str_for_log = String::from_utf8_lossy(&error_body_bytes);
+                        let base_msg = format!(
+                            "VRChat API returned status {} with non-JSON error body. Parse error: {}. Body: '{}'",
+                            response_status, parse_err, body_str_for_log
+                        );
+                        log::warn!("{:#?}", AuthError { message: base_msg.clone(), auth_cookie_value: extracted_cookie_opt.clone() });
+                        Err(AuthError {
+                            message: base_msg,
+                            auth_cookie_value: extracted_cookie_opt,
+                        })
                     }
                 }
             }
         }
-        Err(http_error) => {
-            log::error!("VRChat API request failed: {:?}", http_error);
-            Err(format!("HTTP request error: {:?}", http_error))
+        Err(http_error) => { 
+            let base_msg = format!("HTTP request error: {:?}", http_error);
+            log::error!("{:#?} (Auth Cookie not available as the request itself failed)", AuthError{message: base_msg.clone(), auth_cookie_value: None});
+            Err(AuthError {
+                message: base_msg,
+                auth_cookie_value: None,
+            })
         }
     }
 }
