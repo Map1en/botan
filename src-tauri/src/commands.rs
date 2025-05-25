@@ -1,5 +1,5 @@
-use botan_server::api_auth::authenticate_with_vrchat_credentials;
-use botan_server::models::{LoginCrendentials, VrcCurrentUser};
+use botan_core::api_auth::authenticate_with_vrchat_credentials;
+use botan_core::models::{LoginCrendentials, VrcCurrentUser};
 use tauri::{AppHandle, Manager, Runtime, Wry};
 use tauri_plugin_store::Store;
 

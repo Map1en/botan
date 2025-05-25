@@ -367,7 +367,7 @@ name = "botan"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "botan_server",
+ "botan_core",
  "env_logger",
  "log",
  "percent-encoding",
@@ -384,7 +384,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "botan_server"
+name = "botan_core"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
