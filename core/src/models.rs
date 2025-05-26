@@ -20,16 +20,16 @@ pub struct VRCErrorResponse {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VRCCurrentUser {
-    pub id: String,
-    pub username: String,
-    pub display_name: String,
+    pub id: Option<String>,
+    pub username: Option<String>,
+    pub display_name: Option<String>,
     pub bio: Option<String>,
     pub current_avatar_thumbnail_image_url: Option<String>,
     pub status: Option<String>,
     pub last_login: Option<String>, // ISO 8601 DataTime string
     pub email_verified: Option<bool>,
-    // login: "emailOtp", "?"(2FA), null
-    pub requires_two_factor_auth: Option<String>,
+    // login: ["emailOtp"], "?"(2FA), null
+    pub requires_two_factor_auth: Vec<String>,
     // ... more fields, not all will be used, just write these for now.
 }
 

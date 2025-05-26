@@ -11,3 +11,4 @@ reqwest = { version = "0.12", features = ["json", "cookies"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 base64 = "0.22"
 percent-encoding = "2.3"
+thiserror = "2.0.12"
