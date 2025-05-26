@@ -24,7 +24,7 @@ impl std::fmt::Display for AuthError {
 impl std::error::Error for AuthError {}
 
 
-pub(crate) use crate::models::{AuthContext, VrcCurrentUser, VrcErrorResponse};
+pub(crate) use crate::models::{AuthContext, VRCCurrentUser, VRCErrorResponse};
 
 fn encode_vrchat_credentials(username: &str, password: &str) -> String {
     let encoded_username = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
@@ -100,7 +100,7 @@ pub async fn authenticate_with_vrchat_credentials(
                     }
                 };
 
-                match serde_json::from_slice::<VrcCurrentUser>(&body_bytes) {
+                match serde_json::from_slice::<VRCCurrentUser>(&body_bytes) {
                     Ok(current_user) => {
                         log::info!("Login successful (status 200, user data parsed) for user: {}", username);
                         if let Some(auth_cookie_value) = extracted_cookie_opt {
@@ -131,7 +131,7 @@ pub async fn authenticate_with_vrchat_credentials(
             } else {
                 let error_body_bytes = response.bytes().await.unwrap_or_default();
 
-                match serde_json::from_slice::<VrcErrorResponse>(&error_body_bytes) {
+                match serde_json::from_slice::<VRCErrorResponse>(&error_body_bytes) {
                     Ok(error_response) => {
                         let base_msg = format!(
                             "VRChat API error ({}): {}",

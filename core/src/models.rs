@@ -7,19 +7,19 @@ pub struct LoginCrendentials {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct VrcErrorDetail {
+pub struct VRCErrorDetail {
     pub message: String,
     pub status_code: u16,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct VrcErrorResponse {
-    pub error: VrcErrorDetail,
+pub struct VRCErrorResponse {
+    pub error: VRCErrorDetail,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct VrcCurrentUser {
+pub struct VRCCurrentUser {
     pub id: String,
     pub username: String,
     pub display_name: String,
@@ -35,6 +35,6 @@ pub struct VrcCurrentUser {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct AuthContext {
-    pub user: VrcCurrentUser,
+    pub user: VRCCurrentUser,
     pub auth_cookie_value: String,
 }

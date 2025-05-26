@@ -1,5 +1,5 @@
 use botan_core::api_auth::authenticate_with_vrchat_credentials;
-use botan_core::models::{LoginCrendentials, VrcCurrentUser};
+use botan_core::models::{LoginCrendentials, VRCCurrentUser};
 use tauri::{AppHandle, Manager, Runtime, Wry};
 use tauri_plugin_store::Store;
 
@@ -10,7 +10,7 @@ const AUTH_COOKIE_KEY: &str = "vrchat_auth_cookie";
 pub async fn auth_user(
     app_handle: AppHandle<impl Runtime>,
     credentials: LoginCrendentials,
-) -> Result<VrcCurrentUser, String> {
+) -> Result<VRCCurrentUser, String> {
     log::info!("auth/user, login");
 
 
