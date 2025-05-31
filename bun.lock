@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "botan",
+      "dependencies": {
+        "@tauri-apps/plugin-store": "~2",
+      },
       "devDependencies": {
         "@tauri-apps/cli": "^2",
         "prettier": "^3.5.3",
