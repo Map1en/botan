@@ -1,6 +1,8 @@
 use crate::AppState;
 use api_models::EitherUserOrTwoFactor;
-use botan_core::api_models;
+use botan_core::api_models::{
+    self, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult,
+};
 use botan_core::auth::auth_get_current_user;
 use botan_core::models::LoginCredentials;
 use reqwest::cookie::CookieStore;
@@ -15,11 +17,6 @@ pub async fn login(
     credentials: LoginCredentials,
 ) -> Result<EitherUserOrTwoFactor, String> {
     log::info!("Tauri command, api - 'auth/user', login");
-
-    log::info!(
-        "Cookie store: {:?}",
-        state.store.lock().unwrap().get("cookies")
-    );
 
     let basic_auth_data = (
         credentials.username.clone(),
@@ -82,7 +79,71 @@ pub async fn login(
         },
         Err(e) => {
             log::error!("Login failed: {:?}", e);
-            Err(format!("Login failed: {:?}", e))
+            Err(serde_json::to_string(&format!("Login failed: {:?}", e)).unwrap())
         }
+    }
+}
+
+pub enum EitherTwoFactorAuthCodeType {
+    IsA(TwoFactorAuthCode),
+    IsB(TwoFactorEmailCode),
+}
+
+pub enum EitherTwoFactorResultType {
+    IsA(Verify2FaResult),
+    IsB(Verify2FaEmailCodeResult),
+}
+
+#[tauri::command]
+pub async fn verify2_fa(
+    state: tauri::State<'_, AppState>,
+    two_fa_type: &str,
+    code: &EitherTwoFactorAuthCodeType,
+) -> Result<EitherTwoFactorResultType, String> {
+    log::info!("Tauri command, api - 'auth/verify2fa', verify2_fa");
+
+    let client = state.vrc_client.read().await;
+
+    match two_fa_type {
+        "2fa" => {
+            if let EitherTwoFactorAuthCodeType::IsA(auth_code) = code {
+                let result =
+                    botan_core::auth::auth_verify2_fa(&client.config, auth_code.clone()).await;
+                match result {
+                    Ok(res) => Ok(EitherTwoFactorResultType::IsA(res)),
+                    Err(e) => {
+                        log::error!("Failed to verify 2FA auth code: {:?}", e);
+                        Err(serde_json::to_string(&format!(
+                            "Failed to verify 2FA auth code: {:?}",
+                            e
+                        ))
+                        .unwrap())
+                    }
+                }
+            } else {
+                Err("Invalid code type for auth verification".to_string())
+            }
+        }
+        "email" => {
+            if let EitherTwoFactorAuthCodeType::IsB(email_code) = code {
+                let result =
+                    botan_core::auth::auth_verify2_fa_email(&client.config, email_code.clone())
+                        .await;
+                match result {
+                    Ok(res) => Ok(EitherTwoFactorResultType::IsB(res)),
+                    Err(e) => {
+                        log::error!("Failed to verify 2FA email code: {:?}", e);
+                        Err(serde_json::to_string(&format!(
+                            "Failed to verify 2FA email code: {:?}",
+                            e
+                        ))
+                        .unwrap())
+                    }
+                }
+            } else {
+                Err("Invalid code type for email verification".to_string())
+            }
+        }
+        _ => Err("Unknown two-factor type".to_string()),
     }
 }
