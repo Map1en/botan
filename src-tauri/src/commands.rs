@@ -7,6 +7,7 @@ use botan_core::auth::auth_get_current_user;
 use botan_core::models::LoginCredentials;
 use reqwest::cookie::CookieStore;
 use reqwest::Url;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
 use tauri::http::HeaderValue;
@@ -84,11 +85,12 @@ pub async fn login(
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EitherTwoFactorAuthCodeType {
     IsA(TwoFactorAuthCode),
     IsB(TwoFactorEmailCode),
 }
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EitherTwoFactorResultType {
     IsA(Verify2FaResult),
     IsB(Verify2FaEmailCodeResult),
@@ -98,7 +100,7 @@ pub enum EitherTwoFactorResultType {
 pub async fn verify2_fa(
     state: tauri::State<'_, AppState>,
     two_fa_type: &str,
-    code: &EitherTwoFactorAuthCodeType,
+    code: EitherTwoFactorAuthCodeType,
 ) -> Result<EitherTwoFactorResultType, String> {
     log::info!("Tauri command, api - 'auth/verify2fa', verify2_fa");
 
