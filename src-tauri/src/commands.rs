@@ -15,18 +15,17 @@ use tauri::http::HeaderValue;
 #[tauri::command]
 pub async fn login(
     state: tauri::State<'_, AppState>,
-    credentials: LoginCredentials,
+    credentials: Option<LoginCredentials>,
 ) -> Result<EitherUserOrTwoFactor, String> {
     log::info!("Tauri command, api - 'auth/user', login");
 
-    let basic_auth_data = (
-        credentials.username.clone(),
-        Some(credentials.password.clone()),
-    );
+    let basic_auth_data: Option<(String, Option<String>)> = credentials
+        .as_ref()
+        .map(|creds| (creds.username.clone(), Some(creds.password.clone())));
 
     let login_config = &mut state.vrc_client.write().await.config;
 
-    login_config.basic_auth = Some(basic_auth_data);
+    login_config.basic_auth = basic_auth_data;
 
     match state.store.lock().unwrap().get("cookies") {
         Some(cookies) => {
