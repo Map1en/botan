@@ -60,7 +60,7 @@ export default function Page() {
       setLoading(true);
       clearMessages();
 
-      const result = (await invoke('auth_user', {
+      const result = (await invoke('login', {
         credentials: {
           username: credentials.username,
           password: credentials.password,
