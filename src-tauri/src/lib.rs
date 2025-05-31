@@ -1,9 +1,8 @@
 pub mod commands;
 use botan_core::client::VrcApiClient;
-use std::sync::Mutex;
 
 pub struct AppState {
-    vrc_client: Mutex<VrcApiClient>,
+    vrc_client: VrcApiClient,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,7 +11,7 @@ pub fn run() {
 
     let vrc_client_instance = VrcApiClient::new();
     let app_state = AppState {
-        vrc_client: Mutex::new(vrc_client_instance),
+        vrc_client: vrc_client_instance,
     };
 
     tauri::Builder::default()

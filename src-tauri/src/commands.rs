@@ -16,16 +16,9 @@ pub async fn auth_user(
         Some(credentials.password.clone()),
     );
 
-    let login_config;
-    {
-        let mut client_guard = state.vrc_client.lock().map_err(|e| {
-            log::error!("Failed to lock VrcApiClient: {}", e.to_string());
-            e.to_string()
-        })?;
+    let mut login_config = state.vrc_client.config.clone();
 
-        client_guard.config.basic_auth = Some(basic_auth_data);
-        login_config = client_guard.config.clone();
-    }
+    login_config.basic_auth = Some(basic_auth_data);
 
     let login_result = login(&login_config).await;
 
