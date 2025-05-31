@@ -7,18 +7,39 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTheme } from '@/theme/ThemeContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
-import EmailOtpDialog from './components/EmailOtpDialog';
 import TwoFactorDialog from './components/TwoFactorDialog';
 
-interface LoginResponse {
-  // 当登录成功时，返回用户信息
+interface CurrentUser {
   id?: string;
   username?: string;
   displayName?: string;
-
-  // 当需要双因素验证时的字段
+  bio?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  status?: string;
+  lastLogin?: string;
+  emailVerified?: boolean;
   requiresTwoFactorAuth?: string[];
 }
+
+interface RequiresTwoFactorAuth {
+  requiresTwoFactorAuth: string[];
+}
+
+type LoginResponse = CurrentUser | RequiresTwoFactorAuth;
+
+interface Verify2FaResult {
+  verified?: boolean;
+  token?: string;
+}
+
+interface Verify2FaEmailCodeResult {
+  verified?: boolean;
+  token?: string;
+}
+
+type EitherTwoFactorResultType =
+  | { IsA: Verify2FaResult }
+  | { IsB: Verify2FaEmailCodeResult };
 
 export default function Page() {
   const [username, setUsername] = useState('');
@@ -26,17 +47,12 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  // 弹窗状态
-  const [emailOtpOpen, setEmailOtpOpen] = useState(false);
+  const [type, setType] = useState<'email' | '2fa'>('2fa');
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
 
-  // 当前登录凭据（用于后续验证步骤）
   const [currentCredentials, setCurrentCredentials] = useState<{
     username: string;
     password: string;
-    emailOtp?: string;
-    twoFactorCode?: string;
   }>({ username: '', password: '' });
 
   const { mode, setMode } = useTheme();
@@ -53,8 +69,6 @@ export default function Page() {
   async function performLogin(credentials: {
     username: string;
     password: string;
-    emailOtp?: string;
-    twoFactorCode?: string;
   }) {
     try {
       setLoading(true);
@@ -67,34 +81,27 @@ export default function Page() {
         },
       })) as LoginResponse;
 
-      console.log('Login response:', result);
+      console.log('Login response:', result.requiresTwoFactorAuth);
 
-      // 检查是否需要双因素验证
-      if (
-        result.requiresTwoFactorAuth &&
-        result.requiresTwoFactorAuth.length > 0
-      ) {
-        // 更新当前凭据
+      if (result.requiresTwoFactorAuth) {
+        const twoFactorData = result.requiresTwoFactorAuth;
         setCurrentCredentials(credentials);
 
-        if (result.requiresTwoFactorAuth.includes('emailOtp')) {
-          // 需要邮箱OTP验证
-          setEmailOtpOpen(true);
+        if (twoFactorData.includes('emailOtp')) {
+          setType('email');
         } else {
-          // 需要其他2FA验证
-          setTwoFactorOpen(true);
+          setType('2fa');
         }
-      } else if (result.id) {
-        // 登录成功 - 有用户ID表示成功
+        setTwoFactorOpen(true);
+      } else if ('CurrentUser' in result) {
+        const userData = result.CurrentUser;
         setSuccess('登录成功！');
-        console.log('Login successful:', result);
+        console.log('Login successful:', userData);
 
-        // 清理状态
         setUsername('');
         setPassword('');
         setCurrentCredentials({ username: '', password: '' });
       } else {
-        // 未知响应格式
         setError('登录响应格式异常');
       }
     } catch (error: any) {
@@ -117,28 +124,75 @@ export default function Page() {
     });
   };
 
-  const handleEmailOtpSubmit = (otp: string) => {
-    setEmailOtpOpen(false);
-    performLogin({
-      ...currentCredentials,
-      emailOtp: otp,
-    });
-  };
-
   const handleTwoFactorSubmit = (code: string) => {
-    setTwoFactorOpen(false);
-    performLogin({
-      ...currentCredentials,
-      twoFactorCode: code,
-    });
+    performVerify2FA(code, type);
   };
 
   const handleDialogClose = () => {
-    setEmailOtpOpen(false);
     setTwoFactorOpen(false);
     setLoading(false);
     setCurrentCredentials({ username: '', password: '' });
   };
+
+  async function performVerify2FA(code: string, type: 'email' | '2fa') {
+    try {
+      setLoading(true);
+      clearMessages();
+
+      const codeData = type === 'email' ? { IsB: { code } } : { IsA: { code } };
+
+      const result = (await invoke('verify2_fa', {
+        twoFaType: type,
+        code: codeData,
+      })) as EitherTwoFactorResultType;
+
+      console.log('2FA verification response:', result);
+
+      let verified = false;
+      if ('IsA' in result) {
+        verified = result.IsA.verified || false;
+      } else if ('IsB' in result) {
+        verified = result.IsB.verified || false;
+      }
+
+      if (verified) {
+        console.log(
+          '2FA verification successful, performing login with cookies...',
+        );
+
+        const loginResult = (await invoke('login', {
+          credentials: {
+            username: currentCredentials.username,
+            password: currentCredentials.password,
+          },
+        })) as LoginResponse;
+
+        console.log('Final login response:', loginResult);
+
+        if ('CurrentUser' in loginResult) {
+          const userData = loginResult.CurrentUser;
+          setSuccess('登录成功！');
+          console.log('Login successful:', userData);
+
+          setUsername('');
+          setPassword('');
+          setCurrentCredentials({ username: '', password: '' });
+          setTwoFactorOpen(false);
+        } else if ('RequiresTwoFactorAuth' in loginResult) {
+          setError('需要额外的验证步骤');
+        } else {
+          setError('登录响应格式异常');
+        }
+      } else {
+        setError('验证失败，请检查验证码');
+      }
+    } catch (error: any) {
+      console.error('2FA verification failed:', error);
+      setError(error.message || '验证失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen p-8">
@@ -199,15 +253,6 @@ export default function Page() {
         </div>
       </div>
 
-      {/* 邮箱OTP验证弹窗 */}
-      <EmailOtpDialog
-        open={emailOtpOpen}
-        onClose={handleDialogClose}
-        onSubmit={handleEmailOtpSubmit}
-        loading={loading}
-      />
-
-      {/* 2FA验证弹窗 */}
       <TwoFactorDialog
         open={twoFactorOpen}
         onClose={handleDialogClose}
