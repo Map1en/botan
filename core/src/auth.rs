@@ -1,6 +1,8 @@
 use crate::client::initialize_client_with_cookies;
 use crate::models::{EitherTwoFactorAuthCodeType, EitherTwoFactorResultType};
-use vrchatapi::apis::authentication_api::{get_current_user, GetCurrentUserError};
+use vrchatapi::apis::authentication_api::{
+    get_current_user, GetCurrentUserError, VerifyAuthTokenError,
+};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::{Error, ResponseContent};
 
@@ -27,7 +29,16 @@ pub async fn auth_and_get_current_user(
     };
 
     match get_current_user(&client_config).await {
-        Ok(user) => Ok(user),
+        Ok(user) => {
+            verify_auth().await.map_err(|e| {
+                Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                    content: e.to_string(),
+                    entity: None,
+                })
+            })?;
+            Ok(user)
+        }
         Err(e) => {
             eprintln!("Failed to login: {}", e);
             log::debug!("Failed to login: {}", e);
@@ -91,5 +102,21 @@ pub async fn verify2_fa(
             }
         }
         _ => Err("Unknown two-factor type".to_string()),
+    }
+}
+
+pub async fn verify_auth(
+) -> Result<vrchatapi::models::VerifyAuthTokenResult, Error<VerifyAuthTokenError>> {
+    let client_config = {
+        let client = GLOBAL_API_CLIENT.read().unwrap();
+        client.config.clone()
+    };
+
+    match vrchatapi::apis::authentication_api::verify_auth_token(&client_config).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            log::error!("Failed to verify auth token: {:?}", e);
+            Err(e)
+        }
     }
 }
