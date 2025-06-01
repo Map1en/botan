@@ -1,0 +1,40 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "cancel": "取消",
+    "close": "关闭"
+  },
+  "login": {
+    "title": "登录",
+    "username": "用户名/邮箱",
+    "password": "密码",
+    "loginButton": "登录",
+    "loggingIn": "登录中...",
+    "messages": {
+      "success": "登录成功！",
+      "failed": "登录失败，请检查您的凭据",
+      "invalidCredentials": "请输入用户名和密码",
+      "additionalVerificationRequired": "需要额外的验证步骤",
+      "invalidResponseFormat": "登录响应格式异常"
+    }
+  },
+  "twoFactor": {
+    "title": "双因素验证",
+    "emailTitle": "邮箱验证",
+    "code": "验证码",
+    "verify": "验证",
+    "verifying": "验证中...",
+    "descriptions": {
+      "email": "我们已向您的邮箱发送了验证码，请输入收到的验证码",
+      "totp": "请输入您的双因素验证码"
+    },
+    "messages": {
+      "failed": "验证失败，请检查验证码",
+      "error": "验证失败，请重试"
+    }
+  },
+  "theme": {
+    "toggleDark": "切换到深色模式",
+    "toggleLight": "切换到浅色模式"
+  }
+}

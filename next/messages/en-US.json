@@ -1,0 +1,40 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "login": {
+    "title": "Login",
+    "username": "Username/Email",
+    "password": "Password",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "messages": {
+      "success": "Login successful!",
+      "failed": "Login failed, please check your credentials",
+      "invalidCredentials": "Please enter username and password",
+      "additionalVerificationRequired": "Additional verification required",
+      "invalidResponseFormat": "Invalid login response format"
+    }
+  },
+  "twoFactor": {
+    "title": "Two-Factor Authentication",
+    "emailTitle": "Email Verification",
+    "code": "Verification Code",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "descriptions": {
+      "email": "We have sent a verification code to your email, please enter the code you received",
+      "totp": "Please enter your two-factor authentication code"
+    },
+    "messages": {
+      "failed": "Verification failed, please check your code",
+      "error": "Verification failed, please try again"
+    }
+  },
+  "theme": {
+    "toggleDark": "Switch to dark mode",
+    "toggleLight": "Switch to light mode"
+  }
+}

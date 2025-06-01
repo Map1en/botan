@@ -11,12 +11,14 @@ import {
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
+import { useClientTranslations } from '../hooks/useClientTranslations';
 
 interface TwoFactorDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (code: string) => void;
   loading?: boolean;
+  type: 'email' | '2fa';
 }
 
 export default function TwoFactorDialog({
@@ -24,7 +26,10 @@ export default function TwoFactorDialog({
   onClose,
   onSubmit,
   loading = false,
+  type,
 }: TwoFactorDialogProps) {
+  const { t } = useClientTranslations();
+
   const [code, setCode] = useState('');
 
   const handleSubmit = () => {
@@ -38,16 +43,26 @@ export default function TwoFactorDialog({
     onClose();
   };
 
+  const getTitle = () => {
+    return type === 'email' ? t('twoFactor.emailTitle') : t('twoFactor.title');
+  };
+
+  const getDescription = () => {
+    return type === 'email'
+      ? t('twoFactor.descriptions.email')
+      : t('twoFactor.descriptions.totp');
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>二步验证</DialogTitle>
+      <DialogTitle>{getTitle()}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          请输入您的二步验证码
+          {getDescription()}
         </Typography>
         <TextField
           autoFocus
-          label="验证码"
+          label={t('twoFactor.code')}
           type="text"
           fullWidth
           variant="outlined"
@@ -63,13 +78,13 @@ export default function TwoFactorDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          取消
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={!code.trim() || loading}>
-          {loading ? '验证中...' : '验证'}
+          {loading ? t('twoFactor.verifying') : t('twoFactor.verify')}
         </Button>
       </DialogActions>
     </Dialog>

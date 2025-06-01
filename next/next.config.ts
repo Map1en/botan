@@ -1,8 +1,11 @@
 import path from 'path';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const isProd = process.env.NODE_ENV === 'production';
 
 const internalHost = process.env.TAURI_DEV_HOST || 'localhost';
+
+const withNextIntl = createNextIntlPlugin('./i18n/config.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -19,4 +22,4 @@ const nextConfig = {
   assetPrefix: isProd ? undefined : `http://${internalHost}:3000`,
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

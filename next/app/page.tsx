@@ -4,10 +4,12 @@ import React from 'react';
 import { TextField, Button, IconButton, Alert } from '@mui/material';
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useClientTranslations } from './hooks/useClientTranslations';
 import { useTheme } from '@/theme/ThemeContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import TwoFactorDialog from './components/TwoFactorDialog';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 interface CurrentUser {
   id?: string;
@@ -42,6 +44,8 @@ type EitherTwoFactorResultType =
   | { IsB: Verify2FaEmailCodeResult };
 
 export default function Page() {
+  const { t } = useClientTranslations();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -95,18 +99,18 @@ export default function Page() {
         setTwoFactorOpen(true);
       } else if ('CurrentUser' in result) {
         const userData = result.CurrentUser;
-        setSuccess('登录成功！');
+        setSuccess(t('login.messages.success'));
         console.log('Login successful:', userData);
 
         setUsername('');
         setPassword('');
         setCurrentCredentials({ username: '', password: '' });
       } else {
-        setError('登录响应格式异常');
+        setError(t('login.messages.invalidResponseFormat'));
       }
     } catch (error: any) {
       console.error('Login failed:', error);
-      setError(error.message || '登录失败，请检查您的凭据');
+      setError(error.message || t('login.messages.failed'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +118,7 @@ export default function Page() {
 
   const handleInitialLogin = () => {
     if (!username.trim() || !password.trim()) {
-      setError('请输入用户名和密码');
+      setError(t('login.messages.invalidCredentials'));
       return;
     }
 
@@ -171,7 +175,7 @@ export default function Page() {
 
         if ('CurrentUser' in loginResult) {
           const userData = loginResult.CurrentUser;
-          setSuccess('登录成功！');
+          setSuccess(t('login.messages.success'));
           console.log('Login successful:', userData);
 
           setUsername('');
@@ -179,16 +183,16 @@ export default function Page() {
           setCurrentCredentials({ username: '', password: '' });
           setTwoFactorOpen(false);
         } else if ('RequiresTwoFactorAuth' in loginResult) {
-          setError('需要额外的验证步骤');
+          setError(t('login.messages.additionalVerificationRequired'));
         } else {
-          setError('登录响应格式异常');
+          setError(t('login.messages.invalidResponseFormat'));
         }
       } else {
-        setError('验证失败，请检查验证码');
+        setError(t('twoFactor.messages.failed'));
       }
     } catch (error: any) {
       console.error('2FA verification failed:', error);
-      setError(error.message || '验证失败，请重试');
+      setError(error.message || t('twoFactor.messages.error'));
     } finally {
       setLoading(false);
     }
@@ -196,14 +200,20 @@ export default function Page() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="mb-4 flex justify-end">
-        <IconButton onClick={toggleTheme} color="inherit">
+      <div className="mb-4 flex items-center justify-end">
+        <LanguageSwitcher />
+        <IconButton
+          onClick={toggleTheme}
+          color="inherit"
+          title={
+            mode === 'dark' ? t('theme.toggleLight') : t('theme.toggleDark')
+          }>
           {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
         </IconButton>
       </div>
 
       <div className="mx-auto max-w-md">
-        <h1 className="mb-6 text-2xl font-bold">登录</h1>
+        <h1 className="mb-6 text-2xl font-bold">{t('login.title')}</h1>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={clearMessages}>
@@ -219,25 +229,25 @@ export default function Page() {
 
         <div className="flex flex-col gap-4">
           <TextField
-            label="用户名/邮箱"
+            label={t('login.username')}
             variant="outlined"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             disabled={loading}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleInitialLogin();
               }
             }}
           />
           <TextField
-            label="密码"
+            label={t('login.password')}
             variant="outlined"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleInitialLogin();
               }
@@ -248,7 +258,7 @@ export default function Page() {
             onClick={handleInitialLogin}
             disabled={loading || !username.trim() || !password.trim()}
             className="mt-4">
-            {loading ? '登录中...' : '登录'}
+            {loading ? t('login.loggingIn') : t('login.loginButton')}
           </Button>
         </div>
       </div>
@@ -258,6 +268,7 @@ export default function Page() {
         onClose={handleDialogClose}
         onSubmit={handleTwoFactorSubmit}
         loading={loading}
+        type={type}
       />
     </div>
   );
