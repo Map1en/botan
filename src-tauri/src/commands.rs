@@ -1,61 +1,28 @@
-use crate::AppState;
 use api_models::EitherUserOrTwoFactor;
-use botan_core::api_models::{
-    self, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult,
+use botan_core::api_models::{self};
+use botan_core::auth::auth_and_get_current_user;
+use botan_core::models::{
+    EitherTwoFactorAuthCodeType, EitherTwoFactorResultType, LoginCredentials,
 };
-use botan_core::auth::auth_get_current_user;
-use botan_core::models::LoginCredentials;
-use reqwest::cookie::CookieStore;
-use reqwest::Url;
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use std::sync::Arc;
-use tauri::http::HeaderValue;
+use tauri::Manager;
 
 #[tauri::command]
 pub async fn login(
-    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
     credentials: Option<LoginCredentials>,
 ) -> Result<EitherUserOrTwoFactor, String> {
     log::info!("Tauri command, api - 'auth/user', login");
 
-    let basic_auth_data: Option<(String, Option<String>)> = credentials
-        .as_ref()
-        .map(|creds| (creds.username.clone(), Some(creds.password.clone())));
+    let cookies_path_buf = app_handle
+        .path()
+        .app_config_dir()
+        .expect("Failed to get app config directory")
+        .join("web.dat");
+    let cookies_path = cookies_path_buf
+        .to_str()
+        .expect("Failed to convert path to string");
 
-    let login_config = &mut state.vrc_client.write().await.config;
-
-    login_config.basic_auth = basic_auth_data;
-
-    match state.store.lock().unwrap().get("cookies") {
-        Some(cookies) => {
-            let jar = reqwest::cookie::Jar::default();
-            jar.set_cookies(
-                &mut [HeaderValue::from_str(
-                    &serde_json::to_string(&cookies).expect("Failed to serialize cookies"),
-                )
-                .expect("Cookie not okay")]
-                .iter(),
-                &Url::from_str("https://api.vrchat.cloud").expect("Url not okay"),
-            );
-            let jar = Arc::new(jar);
-            login_config.client = reqwest::Client::builder()
-                .cookie_provider(jar)
-                .build()
-                .unwrap();
-            log::info!("Cookies loaded from store, proceeding with cookies");
-        }
-        None => {
-            let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
-            login_config.client = reqwest::Client::builder()
-                .cookie_provider(cookie_store.clone())
-                .build()
-                .unwrap();
-            log::warn!("No cookies found in store, proceeding without cookies");
-        }
-    }
-
-    let login_result = auth_get_current_user(&login_config).await;
+    let login_result = auth_and_get_current_user(&credentials, cookies_path).await;
 
     match login_result {
         Ok(either_result) => match either_result {
@@ -84,67 +51,21 @@ pub async fn login(
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EitherTwoFactorAuthCodeType {
-    IsA(TwoFactorAuthCode),
-    IsB(TwoFactorEmailCode),
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EitherTwoFactorResultType {
-    IsA(Verify2FaResult),
-    IsB(Verify2FaEmailCodeResult),
-}
-
 #[tauri::command]
 pub async fn verify2_fa(
-    state: tauri::State<'_, AppState>,
     two_fa_type: &str,
     code: EitherTwoFactorAuthCodeType,
 ) -> Result<EitherTwoFactorResultType, String> {
     log::info!("Tauri command, api - 'auth/verify2fa', verify2_fa");
 
-    let client = state.vrc_client.read().await;
-
-    match two_fa_type {
-        "2fa" => {
-            if let EitherTwoFactorAuthCodeType::IsA(auth_code) = code {
-                let result =
-                    botan_core::auth::auth_verify2_fa(&client.config, auth_code.clone()).await;
-                match result {
-                    Ok(res) => Ok(EitherTwoFactorResultType::IsA(res)),
-                    Err(e) => {
-                        log::error!("Failed to verify 2FA auth code: {:?}", e);
-                        Err(serde_json::to_string(&format!(
-                            "Failed to verify 2FA auth code: {:?}",
-                            e
-                        ))
-                        .unwrap())
-                    }
-                }
-            } else {
-                Err("Invalid code type for auth verification".to_string())
-            }
+    match botan_core::auth::verify2_fa(two_fa_type, code).await {
+        Ok(result) => {
+            log::info!("2FA verification successful");
+            Ok(result)
         }
-        "email" => {
-            if let EitherTwoFactorAuthCodeType::IsB(email_code) = code {
-                let result =
-                    botan_core::auth::auth_verify2_fa_email(&client.config, email_code.clone())
-                        .await;
-                match result {
-                    Ok(res) => Ok(EitherTwoFactorResultType::IsB(res)),
-                    Err(e) => {
-                        log::error!("Failed to verify 2FA email code: {:?}", e);
-                        Err(serde_json::to_string(&format!(
-                            "Failed to verify 2FA email code: {:?}",
-                            e
-                        ))
-                        .unwrap())
-                    }
-                }
-            } else {
-                Err("Invalid code type for email verification".to_string())
-            }
+        Err(e) => {
+            log::error!("2FA verification failed: {:?}", e);
+            Err(format!("2FA verification failed: {}", e))
         }
-        _ => Err("Unknown two-factor type".to_string()),
     }
 }

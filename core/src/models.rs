@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
-
+use vrchatapi::models::{
+    TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult,
+};
 #[derive(Deserialize, Debug, Clone)]
 pub struct LoginCredentials {
     pub username: String,
@@ -37,4 +39,22 @@ pub struct VRCCurrentUser {
 pub struct AuthContext {
     pub user: VRCCurrentUser,
     pub auth_cookie_value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EitherTwoFactorAuthCodeType {
+    IsA(TwoFactorAuthCode),
+    IsB(TwoFactorEmailCode),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EitherTwoFactorResultType {
+    IsA(Verify2FaResult),
+    IsB(Verify2FaEmailCodeResult),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CurrentSession {
+    pub username: Option<String>,
+    pub cookies_path: String,
 }

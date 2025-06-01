@@ -1,18 +1,32 @@
-use vrchatapi::apis::authentication_api::{
-    verify2_fa_email_code, Verify2FaEmailCodeError, Verify2FaError,
-};
+use crate::client::initialize_client_with_cookies;
+use crate::models::{EitherTwoFactorAuthCodeType, EitherTwoFactorResultType};
+use vrchatapi::apis::authentication_api::{get_current_user, GetCurrentUserError};
 pub use vrchatapi::apis::configuration::BasicAuth;
-use vrchatapi::apis::{configuration, Error};
-use vrchatapi::models::{TwoFactorEmailCode, Verify2FaEmailCodeResult};
-use vrchatapi::{
-    apis::authentication_api::{get_current_user, verify2_fa, GetCurrentUserError},
-    models::{TwoFactorAuthCode, Verify2FaResult},
-};
+use vrchatapi::apis::{Error, ResponseContent};
 
-pub async fn auth_get_current_user(
-    client: &configuration::Configuration,
+use crate::client::GLOBAL_API_CLIENT;
+use crate::models::LoginCredentials;
+
+pub async fn auth_and_get_current_user(
+    credentials: &Option<LoginCredentials>,
+    cookies_path: &str,
 ) -> Result<vrchatapi::models::EitherUserOrTwoFactor, Error<GetCurrentUserError>> {
-    match get_current_user(client).await {
+    initialize_client_with_cookies(credentials, cookies_path)
+        .await
+        .map_err(|e| {
+            Error::ResponseError(ResponseContent {
+                status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                content: e,
+                entity: None,
+            })
+        })?;
+
+    let client_config = {
+        let client = GLOBAL_API_CLIENT.read().unwrap();
+        client.config.clone()
+    };
+
+    match get_current_user(&client_config).await {
         Ok(user) => Ok(user),
         Err(e) => {
             eprintln!("Failed to login: {}", e);
@@ -22,30 +36,60 @@ pub async fn auth_get_current_user(
     }
 }
 
-pub async fn auth_verify2_fa(
-    client: &configuration::Configuration,
-    code: TwoFactorAuthCode,
-) -> Result<Verify2FaResult, Error<Verify2FaError>> {
-    match verify2_fa(client, code).await {
-        Ok(result) => Ok(result),
-        Err(e) => {
-            eprintln!("Failed to verify 2FA: {}", e);
-            log::debug!("Failed to verify 2FA: {}", e);
-            Err(e)
-        }
-    }
-}
+pub async fn verify2_fa(
+    two_fa_type: &str,
+    code: EitherTwoFactorAuthCodeType,
+) -> Result<EitherTwoFactorResultType, String> {
+    let client_config = {
+        let client = GLOBAL_API_CLIENT.read().unwrap();
+        client.config.clone()
+    };
 
-pub async fn auth_verify2_fa_email(
-    client: &configuration::Configuration,
-    code: TwoFactorEmailCode,
-) -> Result<Verify2FaEmailCodeResult, Error<Verify2FaEmailCodeError>> {
-    match verify2_fa_email_code(client, code).await {
-        Ok(result) => Ok(result),
-        Err(e) => {
-            eprintln!("Failed to verify 2FA email code: {}", e);
-            log::debug!("Failed to verify 2FA email code: {}", e);
-            Err(e)
+    match two_fa_type {
+        "2fa" => {
+            if let EitherTwoFactorAuthCodeType::IsA(auth_code) = code {
+                let result = vrchatapi::apis::authentication_api::verify2_fa(
+                    &client_config,
+                    auth_code.clone(),
+                )
+                .await;
+                match result {
+                    Ok(res) => Ok(EitherTwoFactorResultType::IsA(res)),
+                    Err(e) => {
+                        log::error!("Failed to verify 2FA auth code: {:?}", e);
+                        Err(serde_json::to_string(&format!(
+                            "Failed to verify 2FA auth code: {:?}",
+                            e
+                        ))
+                        .unwrap())
+                    }
+                }
+            } else {
+                Err("Invalid code type for auth verification".to_string())
+            }
         }
+        "email" => {
+            if let EitherTwoFactorAuthCodeType::IsB(email_code) = code {
+                let result = vrchatapi::apis::authentication_api::verify2_fa_email_code(
+                    &client_config,
+                    email_code.clone(),
+                )
+                .await;
+                match result {
+                    Ok(res) => Ok(EitherTwoFactorResultType::IsB(res)),
+                    Err(e) => {
+                        log::error!("Failed to verify 2FA email code: {:?}", e);
+                        Err(serde_json::to_string(&format!(
+                            "Failed to verify 2FA email code: {:?}",
+                            e
+                        ))
+                        .unwrap())
+                    }
+                }
+            } else {
+                Err("Invalid code type for email verification".to_string())
+            }
+        }
+        _ => Err("Unknown two-factor type".to_string()),
     }
 }
