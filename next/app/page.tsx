@@ -53,6 +53,7 @@ export default function Page() {
   const [success, setSuccess] = useState('');
   const [type, setType] = useState<'email' | '2fa'>('2fa');
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState('');
 
   const [currentCredentials, setCurrentCredentials] = useState<{
     username: string;
@@ -68,6 +69,10 @@ export default function Page() {
   const clearMessages = () => {
     setError('');
     setSuccess('');
+  };
+
+  const clearTwoFactorError = () => {
+    setTwoFactorError('');
   };
 
   async function performLogin(credentials: {
@@ -135,6 +140,7 @@ export default function Page() {
   const handleDialogClose = () => {
     setTwoFactorOpen(false);
     setLoading(false);
+    setTwoFactorError('');
     setCurrentCredentials({ username: '', password: '' });
   };
 
@@ -142,6 +148,7 @@ export default function Page() {
     try {
       setLoading(true);
       clearMessages();
+      clearTwoFactorError();
 
       const codeData = type === 'email' ? { IsB: { code } } : { IsA: { code } };
 
@@ -182,17 +189,18 @@ export default function Page() {
           setPassword('');
           setCurrentCredentials({ username: '', password: '' });
           setTwoFactorOpen(false);
+          setTwoFactorError('');
         } else if ('RequiresTwoFactorAuth' in loginResult) {
-          setError(t('login.messages.additionalVerificationRequired'));
+          setTwoFactorError(t('login.messages.additionalVerificationRequired'));
         } else {
-          setError(t('login.messages.invalidResponseFormat'));
+          setTwoFactorError(t('login.messages.invalidResponseFormat'));
         }
       } else {
-        setError(t('twoFactor.messages.failed'));
+        setTwoFactorError(t('twoFactor.messages.failed'));
       }
     } catch (error: any) {
       console.error('2FA verification failed:', error);
-      setError(error.message || t('twoFactor.messages.error'));
+      setTwoFactorError(error.message || t('twoFactor.messages.error'));
     } finally {
       setLoading(false);
     }
@@ -269,6 +277,8 @@ export default function Page() {
         onSubmit={handleTwoFactorSubmit}
         loading={loading}
         type={type}
+        error={twoFactorError}
+        onClearError={clearTwoFactorError}
       />
     </div>
   );

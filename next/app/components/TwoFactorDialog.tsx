@@ -9,6 +9,7 @@ import {
   TextField,
   Button,
   Typography,
+  Alert,
 } from '@mui/material';
 import { useState } from 'react';
 import { useClientTranslations } from '../hooks/useClientTranslations';
@@ -19,6 +20,8 @@ interface TwoFactorDialogProps {
   onSubmit: (code: string) => void;
   loading?: boolean;
   type: 'email' | '2fa';
+  error?: string;
+  onClearError?: () => void;
 }
 
 export default function TwoFactorDialog({
@@ -27,6 +30,8 @@ export default function TwoFactorDialog({
   onSubmit,
   loading = false,
   type,
+  error,
+  onClearError,
 }: TwoFactorDialogProps) {
   const { t } = useClientTranslations();
 
@@ -40,7 +45,16 @@ export default function TwoFactorDialog({
 
   const handleClose = () => {
     setCode('');
+    if (onClearError) {
+      onClearError();
+    }
     onClose();
+  };
+
+  const handleClearError = () => {
+    if (onClearError) {
+      onClearError();
+    }
   };
 
   const getTitle = () => {
@@ -60,6 +74,13 @@ export default function TwoFactorDialog({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {getDescription()}
         </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={handleClearError}>
+            {error}
+          </Alert>
+        )}
+
         <TextField
           autoFocus
           label={t('twoFactor.code')}
