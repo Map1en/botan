@@ -9,14 +9,12 @@ use std::sync::{LazyLock, RwLock};
 use tokio::sync::Mutex;
 use vrchatapi::apis::configuration::Configuration;
 
-
 pub use vrchatapi::apis::configuration::BasicAuth;
-use vrchatapi::apis::{Error};
-
+use vrchatapi::apis::Error;
 
 use crate::models::response::ApiResponse;
 
-use crate::models::{CurrentSession, LoginCredentials}; 
+use crate::models::{CurrentSession, LoginCredentials};
 
 static CURRENT_SESSION: LazyLock<Mutex<Option<CurrentSession>>> =
     LazyLock::new(|| Mutex::new(None));
@@ -108,22 +106,19 @@ pub fn save_cookies_from_jar(
     cookies_path: &str,
 ) -> Result<(), String> {
     let url = reqwest::Url::parse("https://api.vrchat.cloud").unwrap();
-    
 
     let cookies: Vec<String> = cookie_store
         .cookies(&url)
         .iter()
         .filter_map(|cookie| cookie.to_str().ok().map(|s| s.to_string()))
         .collect();
-    
-    log::info!("Cookies to save: {:?}", cookies);
 
     if !cookies.is_empty() {
         let cookie_string = cookies.join("; ");
-        
+
         encrypt_and_save_data(&cookie_string, cookies_path)
             .map_err(|e| format!("Failed to encrypt and save cookies: {}", e))?;
-        
+
         log::info!("Cookies saved successfully to: {}", cookies_path);
     } else {
         log::warn!("No cookies found to save");
@@ -155,13 +150,12 @@ pub fn load_and_decrypt_data(filepath: &str) -> Result<String, Box<dyn std::erro
     Ok(decrypted_string)
 }
 
-
-
-
 pub fn create_error_response<T, E>(error: &Error<E>, base_message: &str) -> ApiResponse<T> {
     let (status_code, error_details) = match error {
         Error::ResponseError(response) => {
-            let details = if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&response.content) {
+            let details = if let Ok(json_value) =
+                serde_json::from_str::<serde_json::Value>(&response.content)
+            {
                 Some(json_value)
             } else {
                 Some(serde_json::json!({
@@ -179,12 +173,15 @@ pub fn create_error_response<T, E>(error: &Error<E>, base_message: &str) -> ApiR
             }));
             (status, details)
         }
-        _ => (500, Some(serde_json::json!({
-            "type": "other_error",
-            "message": format!("{}", error)
-        })))
+        _ => (
+            500,
+            Some(serde_json::json!({
+                "type": "other_error",
+                "message": format!("{}", error)
+            })),
+        ),
     };
-    
+
     ApiResponse::error(
         status_code,
         format!("{}: {}", base_message, error),
