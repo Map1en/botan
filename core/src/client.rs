@@ -1,3 +1,5 @@
+use crate::models::response::ApiResponse;
+use crate::models::{CurrentSession, LoginCredentials};
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use reqwest::cookie::CookieStore;
 use reqwest::header::HeaderValue;
@@ -7,14 +9,9 @@ use std::io::Write;
 use std::str::FromStr;
 use std::sync::{LazyLock, RwLock};
 use tokio::sync::Mutex;
-use vrchatapi::apis::configuration::Configuration;
-
 pub use vrchatapi::apis::configuration::BasicAuth;
+use vrchatapi::apis::configuration::Configuration;
 use vrchatapi::apis::Error;
-
-use crate::models::response::ApiResponse;
-
-use crate::models::{CurrentSession, LoginCredentials};
 
 static CURRENT_SESSION: LazyLock<Mutex<Option<CurrentSession>>> =
     LazyLock::new(|| Mutex::new(None));

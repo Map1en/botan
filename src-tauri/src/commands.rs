@@ -1,8 +1,8 @@
-use botan_core::api_models::EitherUserOrTwoFactor;
 use botan_core::auth::auth_and_get_current_user;
 use botan_core::models::response::ApiResponse;
 use botan_core::models::TwoFactorVerifyResult;
 use botan_core::models::{EitherTwoFactorAuthCodeType, LoginCredentials};
+use botan_core::vrchatapi_models::EitherUserOrTwoFactor;
 use tauri::Manager;
 
 fn get_cookies_path(app_handle: &tauri::AppHandle) -> String {
