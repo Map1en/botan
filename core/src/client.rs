@@ -9,7 +9,14 @@ use std::sync::{LazyLock, RwLock};
 use tokio::sync::Mutex;
 use vrchatapi::apis::configuration::Configuration;
 
-use crate::models::{CurrentSession, LoginCredentials}; // 引入 Write trait
+
+pub use vrchatapi::apis::configuration::BasicAuth;
+use vrchatapi::apis::{Error};
+
+
+use crate::models::response::ApiResponse;
+
+use crate::models::{CurrentSession, LoginCredentials}; 
 
 static CURRENT_SESSION: LazyLock<Mutex<Option<CurrentSession>>> =
     LazyLock::new(|| Mutex::new(None));
@@ -39,6 +46,7 @@ impl VrcApiClient {
 pub async fn initialize_client_with_cookies(
     credentials: &Option<LoginCredentials>,
     cookies_path: &str,
+    cookie_store: std::sync::Arc<reqwest::cookie::Jar>,
 ) -> Result<(), String> {
     let new_username = credentials.as_ref().map(|c| c.username.clone());
 
@@ -55,7 +63,7 @@ pub async fn initialize_client_with_cookies(
         return Ok(());
     }
 
-    let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
+    let cookie_store = cookie_store;
     let url = Url::from_str("https://api.vrchat.cloud").expect("Invalid URL");
 
     match load_and_decrypt_data(cookies_path) {
@@ -95,6 +103,35 @@ pub async fn initialize_client_with_cookies(
     Ok(())
 }
 
+pub fn save_cookies_from_jar(
+    cookie_store: &std::sync::Arc<reqwest::cookie::Jar>,
+    cookies_path: &str,
+) -> Result<(), String> {
+    let url = reqwest::Url::parse("https://api.vrchat.cloud").unwrap();
+    
+
+    let cookies: Vec<String> = cookie_store
+        .cookies(&url)
+        .iter()
+        .filter_map(|cookie| cookie.to_str().ok().map(|s| s.to_string()))
+        .collect();
+    
+    log::info!("Cookies to save: {:?}", cookies);
+
+    if !cookies.is_empty() {
+        let cookie_string = cookies.join("; ");
+        
+        encrypt_and_save_data(&cookie_string, cookies_path)
+            .map_err(|e| format!("Failed to encrypt and save cookies: {}", e))?;
+        
+        log::info!("Cookies saved successfully to: {}", cookies_path);
+    } else {
+        log::warn!("No cookies found to save");
+    }
+
+    Ok(())
+}
+
 static SALT: &str = "fake_salt";
 
 pub fn encrypt_and_save_data(data: &str, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -116,4 +153,41 @@ pub fn load_and_decrypt_data(filepath: &str) -> Result<String, Box<dyn std::erro
 
     println!("load cookie from {}", filepath);
     Ok(decrypted_string)
+}
+
+
+
+
+pub fn create_error_response<T, E>(error: &Error<E>, base_message: &str) -> ApiResponse<T> {
+    let (status_code, error_details) = match error {
+        Error::ResponseError(response) => {
+            let details = if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&response.content) {
+                Some(json_value)
+            } else {
+                Some(serde_json::json!({
+                    "raw_content": response.content,
+                    "status": response.status.as_u16()
+                }))
+            };
+            (response.status.as_u16(), details)
+        }
+        Error::Reqwest(reqwest_err) => {
+            let status = reqwest_err.status().map(|s| s.as_u16()).unwrap_or(500);
+            let details = Some(serde_json::json!({
+                "type": "reqwest_error",
+                "message": reqwest_err.to_string()
+            }));
+            (status, details)
+        }
+        _ => (500, Some(serde_json::json!({
+            "type": "other_error",
+            "message": format!("{}", error)
+        })))
+    };
+    
+    ApiResponse::error(
+        status_code,
+        format!("{}: {}", base_message, error),
+        error_details,
+    )
 }

@@ -27,21 +27,28 @@ interface RequiresTwoFactorAuth {
   requiresTwoFactorAuth: string[];
 }
 
-type LoginResponse = CurrentUser | RequiresTwoFactorAuth;
+type ApiResponse<T> = {
+  status: number;
+  success: boolean;
+  data: T | null;
+  message?: string;
+  error_details: { message: string; status_code?: number } | null;
+};
+
+type LoginResponse = ApiResponse<CurrentUser | RequiresTwoFactorAuth>;
 
 interface Verify2FaResult {
-  verified?: boolean;
-  token?: string;
+  verified: boolean;
+  enabled?: boolean;
 }
 
 interface Verify2FaEmailCodeResult {
-  verified?: boolean;
-  token?: string;
+  verified: boolean;
 }
 
-type EitherTwoFactorResultType =
-  | { IsA: Verify2FaResult }
-  | { IsB: Verify2FaEmailCodeResult };
+type EitherTwoFactorResultType = ApiResponse<
+  Verify2FaResult | Verify2FaEmailCodeResult
+>;
 
 export default function Page() {
   const { t } = useClientTranslations();
@@ -90,10 +97,10 @@ export default function Page() {
         },
       })) as LoginResponse;
 
-      console.log('Login response:', result.requiresTwoFactorAuth);
+      console.log('Login response:', result.data?.requiresTwoFactorAuth);
 
-      if (result.requiresTwoFactorAuth) {
-        const twoFactorData = result.requiresTwoFactorAuth;
+      if (result.data?.requiresTwoFactorAuth) {
+        const twoFactorData = result.data.requiresTwoFactorAuth;
         setCurrentCredentials(credentials);
 
         if (twoFactorData.includes('emailOtp')) {
@@ -160,11 +167,12 @@ export default function Page() {
       console.log('2FA verification response:', result);
 
       let verified = false;
-      if ('IsA' in result) {
-        verified = result.IsA.verified || false;
-      } else if ('IsB' in result) {
-        verified = result.IsB.verified || false;
-      }
+      // if ('IsA' in result) {
+      //   verified = result.IsA.verified || false;
+      // } else if ('IsB' in result) {
+      //   verified = result.IsB.verified || false;
+      // }
+      verified = result.data?.verified || false;
 
       if (verified) {
         console.log(

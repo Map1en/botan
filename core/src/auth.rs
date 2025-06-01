@@ -1,27 +1,25 @@
-use crate::client::initialize_client_with_cookies;
-use crate::models::{EitherTwoFactorAuthCodeType, EitherTwoFactorResultType};
+use crate::client::{initialize_client_with_cookies,save_cookies_from_jar};
+use crate::models::{EitherTwoFactorAuthCodeType,};
 use vrchatapi::apis::authentication_api::{
-    get_current_user, GetCurrentUserError, VerifyAuthTokenError,
+    get_current_user, VerifyAuthTokenError,
 };
 pub use vrchatapi::apis::configuration::BasicAuth;
-use vrchatapi::apis::{Error, ResponseContent};
-
-use crate::client::GLOBAL_API_CLIENT;
+use vrchatapi::apis::{Error};
+use crate::client::{GLOBAL_API_CLIENT,create_error_response};
 use crate::models::LoginCredentials;
+use crate::models::response::ApiResponse;
+use crate::models::TwoFactorVerifyResult;
+
 
 pub async fn auth_and_get_current_user(
     credentials: &Option<LoginCredentials>,
     cookies_path: &str,
-) -> Result<vrchatapi::models::EitherUserOrTwoFactor, Error<GetCurrentUserError>> {
-    initialize_client_with_cookies(credentials, cookies_path)
-        .await
-        .map_err(|e| {
-            Error::ResponseError(ResponseContent {
-                status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                content: e,
-                entity: None,
-            })
-        })?;
+) -> ApiResponse<vrchatapi::models::EitherUserOrTwoFactor> {
+
+    let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
+     if let Err(e) = initialize_client_with_cookies(credentials, cookies_path,cookie_store.clone()).await {
+        return ApiResponse::simple_error(500, format!("Client initialization failed: {}", e));
+    }
 
     let client_config = {
         let client = GLOBAL_API_CLIENT.read().unwrap();
@@ -30,19 +28,27 @@ pub async fn auth_and_get_current_user(
 
     match get_current_user(&client_config).await {
         Ok(user) => {
-            verify_auth().await.map_err(|e| {
-                Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    content: e.to_string(),
-                    entity: None,
-                })
-            })?;
-            Ok(user)
+           match &user {
+                vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
+                    log::info!("Login successful for user: {}", current_user.display_name);
+                    save_cookies_from_jar(&cookie_store, cookies_path)
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to save cookies: {}", e);
+                            eprintln!("Failed to save cookies: {}", e);
+                        });
+                }
+                vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(_) => {
+                    log::info!("2FA required, not saving cookies yet");
+                }
+            }
+
+            ApiResponse::success(user, None)
         }
         Err(e) => {
             eprintln!("Failed to login: {}", e);
             log::debug!("Failed to login: {}", e);
-            Err(e)
+
+            create_error_response(&e, "Failed to login")
         }
     }
 }
@@ -50,7 +56,7 @@ pub async fn auth_and_get_current_user(
 pub async fn verify2_fa(
     two_fa_type: &str,
     code: EitherTwoFactorAuthCodeType,
-) -> Result<EitherTwoFactorResultType, String> {
+) -> ApiResponse<TwoFactorVerifyResult> {
     let client_config = {
         let client = GLOBAL_API_CLIENT.read().unwrap();
         client.config.clone()
@@ -59,49 +65,42 @@ pub async fn verify2_fa(
     match two_fa_type {
         "2fa" => {
             if let EitherTwoFactorAuthCodeType::IsA(auth_code) = code {
-                let result = vrchatapi::apis::authentication_api::verify2_fa(
-                    &client_config,
-                    auth_code.clone(),
-                )
-                .await;
-                match result {
-                    Ok(res) => Ok(EitherTwoFactorResultType::IsA(res)),
+                match vrchatapi::apis::authentication_api::verify2_fa(&client_config, auth_code.clone()).await {
+                    Ok(res) => {
+                        log::info!("2FA verification successful: {:?}", res);
+                        ApiResponse::success(
+                            TwoFactorVerifyResult::from(res),
+                            Some("2FA verification successful".to_string()),
+                        )
+                    }
                     Err(e) => {
                         log::error!("Failed to verify 2FA auth code: {:?}", e);
-                        Err(serde_json::to_string(&format!(
-                            "Failed to verify 2FA auth code: {:?}",
-                            e
-                        ))
-                        .unwrap())
+                        create_error_response(&e, "Failed to verify 2FA auth code")
                     }
                 }
             } else {
-                Err("Invalid code type for auth verification".to_string())
+                ApiResponse::simple_error(400, "Invalid code type for auth verification".to_string())
             }
         }
         "email" => {
             if let EitherTwoFactorAuthCodeType::IsB(email_code) = code {
-                let result = vrchatapi::apis::authentication_api::verify2_fa_email_code(
-                    &client_config,
-                    email_code.clone(),
-                )
-                .await;
-                match result {
-                    Ok(res) => Ok(EitherTwoFactorResultType::IsB(res)),
+                match vrchatapi::apis::authentication_api::verify2_fa_email_code(&client_config, email_code.clone()).await {
+                    Ok(res) => {
+                        ApiResponse::success(
+                            TwoFactorVerifyResult::from(res),
+                            Some("Email 2FA verification successful".to_string()),
+                        )
+                    }
                     Err(e) => {
                         log::error!("Failed to verify 2FA email code: {:?}", e);
-                        Err(serde_json::to_string(&format!(
-                            "Failed to verify 2FA email code: {:?}",
-                            e
-                        ))
-                        .unwrap())
+                        create_error_response(&e, "Failed to verify 2FA email code")
                     }
                 }
             } else {
-                Err("Invalid code type for email verification".to_string())
+                ApiResponse::simple_error(400, "Invalid code type for email verification".to_string())
             }
         }
-        _ => Err("Unknown two-factor type".to_string()),
+        _ => ApiResponse::simple_error(400, "Unknown two-factor type".to_string()),
     }
 }
 
@@ -113,7 +112,9 @@ pub async fn verify_auth(
     };
 
     match vrchatapi::apis::authentication_api::verify_auth_token(&client_config).await {
-        Ok(result) => Ok(result),
+        Ok(result) => {
+            Ok(result)
+        },
         Err(e) => {
             log::error!("Failed to verify auth token: {:?}", e);
             Err(e)
