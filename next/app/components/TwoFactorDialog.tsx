@@ -40,10 +40,10 @@ export default function TwoFactorDialog({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>双因素验证</DialogTitle>
+      <DialogTitle>二步验证</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          请输入您的双因素验证码
+          请输入您的二步验证码
         </Typography>
         <TextField
           autoFocus
@@ -53,7 +53,7 @@ export default function TwoFactorDialog({
           variant="outlined"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          onKeyPress={(e) => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter') {
               handleSubmit();
             }
