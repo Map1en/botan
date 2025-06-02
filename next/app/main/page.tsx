@@ -45,8 +45,7 @@ export default function MainPage() {
   }
 
   return (
-    <Box
-      sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box className="min-h-screen flex-1" sx={{ bgcolor: 'background.default' }}>
       <AppBar
         position="static"
         sx={{
@@ -57,70 +56,70 @@ export default function MainPage() {
               ? '0 2px 4px rgba(255,255,255,0.1)'
               : '0 2px 4px rgba(0,0,0,0.1)',
         }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Toolbar className="px-4 sm:px-6">
+          <Typography variant="h6" className="flex-1">
             {t('main.welcome')} {user?.displayName || user?.username}
           </Typography>
 
-          <LanguageSwitcher />
+          <div className="flex items-center space-x-2">
+            <LanguageSwitcher />
 
-          <IconButton
-            onClick={toggleTheme}
-            sx={{
-              ml: 1,
-              color: mode === 'dark' ? 'white' : 'text.primary',
-            }}>
-            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
+            <IconButton
+              onClick={toggleTheme}
+              className="transition-colors"
+              sx={{
+                color: mode === 'dark' ? 'white' : 'text.primary',
+              }}>
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
 
-          <IconButton
-            onClick={handleLogout}
-            sx={{
-              ml: 1,
-              color: mode === 'dark' ? 'white' : 'text.primary',
-            }}>
-            <LogoutIcon />
-          </IconButton>
+            <IconButton
+              onClick={handleLogout}
+              className="transition-colors"
+              sx={{
+                color: mode === 'dark' ? 'white' : 'text.primary',
+              }}>
+              <LogoutIcon />
+            </IconButton>
+          </div>
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
+      <div className="p-6">
+        <Typography variant="h4" className="mb-8">
           {t('main.title')}
         </Typography>
 
-        <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
+        <Paper elevation={3} className="mt-6 p-6">
+          <Typography variant="h6" className="mb-4">
             {t('main.userInfo')}
           </Typography>
-          <Box
-            sx={{
-              backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.100',
-              p: 2,
-              borderRadius: 1,
-              maxHeight: 400,
-              overflow: 'auto',
+
+          <div
+            className="max-h-96 overflow-auto rounded-lg p-4"
+            style={{
+              backgroundColor: mode === 'dark' ? '#424242' : '#f5f5f5',
             }}>
             <pre
+              className="font-mono text-xs break-words whitespace-pre-wrap"
               style={{
                 margin: 0,
-                fontSize: '12px',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
                 color: mode === 'dark' ? '#ffffff' : '#000000',
               }}>
               {JSON.stringify(user, null, 2)}
             </pre>
-          </Box>
+          </div>
         </Paper>
 
-        <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={handleLogout}>
+        <div className="mt-6 flex flex-wrap gap-4">
+          <Button
+            variant="outlined"
+            onClick={handleLogout}
+            className="transition-transform hover:scale-105">
             {t('main.logout')}
           </Button>
-        </Box>
-      </Box>
+        </div>
+      </div>
     </Box>
   );
 }

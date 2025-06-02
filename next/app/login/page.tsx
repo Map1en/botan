@@ -125,22 +125,8 @@ export default function LoginPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          display: 'flex',
-          gap: 1,
-        }}>
+    <Box className="relative flex min-h-screen items-center justify-center">
+      <div className="absolute top-4 right-4 flex gap-1">
         <LanguageSwitcher />
         <IconButton
           onClick={toggleTheme}
@@ -149,9 +135,9 @@ export default function LoginPage() {
           }>
           {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
         </IconButton>
-      </Box>
+      </div>
 
-      <Box sx={{ maxWidth: 400, width: '100%', p: 3 }}>
+      <div className="w-full max-w-md p-6">
         <Typography
           variant="h5"
           component="h1"
@@ -166,7 +152,7 @@ export default function LoginPage() {
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="flex flex-col gap-4">
           <TextField
             label={t('login.username')}
             variant="outlined"
@@ -196,7 +182,7 @@ export default function LoginPage() {
             fullWidth>
             {isLoading ? t('login.loggingIn') : t('login.loginButton')}
           </Button>
-        </Box>
+        </div>
 
         <TwoFactorDialog
           open={twoFactorOpen}
@@ -207,7 +193,7 @@ export default function LoginPage() {
           error={twoFactorError}
           onClearError={() => setTwoFactorError('')}
         />
-      </Box>
+      </div>
     </Box>
   );
 }
