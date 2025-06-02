@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@tauri-apps/plugin-store": "~2.2.0",
-    "next-intl": "^4.1.0"
+    "next-intl": "^4.1.0",
+    "zustand": "^5.0.5"
   }
 }
