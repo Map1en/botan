@@ -38,19 +38,19 @@ export default function LanguageSwitcher() {
   };
 
   const switchLanguage = (locale: string) => {
-    localStorage.setItem('locale', locale);
-    setCurrentLocale(locale);
-    handleClose();
-
     if (currentLocale !== locale) {
-      window.location.reload();
-    }
-  };
+      localStorage.setItem('locale', locale);
+      setCurrentLocale(locale);
+      handleClose();
 
-  const getCurrentLanguage = () => {
-    return (
-      languages.find((lang) => lang.code === currentLocale) || languages[0]
-    );
+      window.dispatchEvent(
+        new CustomEvent('languageChanged', {
+          detail: { locale },
+        }),
+      );
+    } else {
+      handleClose();
+    }
   };
 
   if (!isInitialized) {

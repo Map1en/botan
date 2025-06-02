@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Messages {
   [key: string]: any;
@@ -21,19 +21,41 @@ export function useClientTranslations(namespace?: string) {
       setLocale(savedLocale);
       setMessages(translations[savedLocale] || translations['zh-CN']);
     }
+
+    // 监听语言切换事件
+    const handleLanguageChange = (event: CustomEvent) => {
+      const newLocale = event.detail.locale;
+      setLocale(newLocale);
+      setMessages(translations[newLocale] || translations['zh-CN']);
+    };
+
+    window.addEventListener(
+      'languageChanged',
+      handleLanguageChange as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'languageChanged',
+        handleLanguageChange as EventListener,
+      );
+    };
   }, [locale]);
 
-  const t = (key: string): string => {
-    const keys = key.split('.');
-    let value = messages;
+  const t = useCallback(
+    (key: string): string => {
+      const keys = key.split('.');
+      let value = messages;
 
-    for (const k of keys) {
-      value = value?.[k];
-      if (value === undefined) break;
-    }
+      for (const k of keys) {
+        value = value?.[k];
+        if (value === undefined) break;
+      }
 
-    return typeof value === 'string' ? value : key;
-  };
+      return typeof value === 'string' ? value : key;
+    },
+    [messages],
+  );
 
   return { t, locale, setLocale };
 }
