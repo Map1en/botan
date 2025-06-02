@@ -13,17 +13,12 @@ import {
 import { useRouter } from 'next/navigation';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuthStore } from '../store/authStore';
-import { useTheme } from '../../theme/ThemeContext';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useClientTranslations } from '../hooks/useClientTranslations';
 
 export default function MainPage() {
   const { t } = useClientTranslations();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const { mode, setMode } = useTheme();
 
   // 如果未登录，重定向到登录页
   useEffect(() => {
@@ -35,10 +30,6 @@ export default function MainPage() {
   const handleLogout = () => {
     logout();
     router.push('/login');
-  };
-
-  const toggleTheme = () => {
-    setMode(mode === 'light' ? 'dark' : 'light');
   };
 
   // 如果未登录，不渲染内容
@@ -54,12 +45,6 @@ export default function MainPage() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             {t('main.welcome')} {user?.displayName || user?.username}
           </Typography>
-
-          <LanguageSwitcher />
-
-          <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
-            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
 
           <IconButton color="inherit" onClick={handleLogout} sx={{ ml: 1 }}>
             <LogoutIcon />
@@ -78,7 +63,7 @@ export default function MainPage() {
           </Typography>
           <Box
             sx={{
-              backgroundColor: mode === 'dark' ? 'grey.900' : 'grey.100',
+              backgroundColor: 'grey.100',
               p: 2,
               borderRadius: 1,
               maxHeight: 400,

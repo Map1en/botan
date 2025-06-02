@@ -1,15 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Alert, Box, Typography } from '@mui/material';
+import {
+  TextField,
+  Button,
+  Alert,
+  Box,
+  Typography,
+  IconButton,
+} from '@mui/material';
 import { useRouter } from 'next/navigation';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useAuthStore } from '../store/authStore';
 import { useClientTranslations } from '../hooks/useClientTranslations';
+import { useTheme } from '../../theme/ThemeContext';
 import TwoFactorDialog from '../components/TwoFactorDialog';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const { t } = useClientTranslations();
   const router = useRouter();
+  const { mode, setMode } = useTheme();
   const {
     login,
     verify2FA,
@@ -37,6 +49,10 @@ export default function LoginPage() {
       router.push('/main');
     }
   }, [isAuthenticated, router]);
+
+  const toggleTheme = () => {
+    setMode(mode === 'light' ? 'dark' : 'light');
+  };
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -118,10 +134,34 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
+        position: 'relative',
       }}>
+      {/* 右上角的控制按钮 */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          display: 'flex',
+          gap: 1,
+        }}>
+        <LanguageSwitcher />
+        <IconButton
+          onClick={toggleTheme}
+          title={
+            mode === 'dark' ? t('theme.toggleLight') : t('theme.toggleDark')
+          }>
+          {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+        </IconButton>
+      </Box>
+
+      {/* 登录表单 */}
       <Box sx={{ maxWidth: 400, width: '100%', p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
+        <Typography
+          variant="h5"
+          component="h1"
+          align="left"
+          sx={{ mb: 3, fontWeight: 500 }}>
           {t('login.title')}
         </Typography>
 
