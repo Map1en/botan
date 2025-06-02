@@ -1,6 +1,5 @@
 use crate::models::response::ApiResponse;
 use crate::models::{CurrentSession, LoginCredentials};
-use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use reqwest::cookie::CookieStore;
 use reqwest::header::HeaderValue;
 use reqwest::Url;
@@ -28,7 +27,6 @@ impl VrcApiClient {
         let mut config = Configuration::default();
         const PKG_NAME: &str = env!("CARGO_PKG_NAME");
         const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
-
         pub(crate) fn get_default_user_agent() -> String {
             format!("{}/{}", PKG_NAME, PKG_VERSION)
         }
@@ -40,7 +38,7 @@ impl VrcApiClient {
 
 pub async fn initialize_client_with_cookies(
     credentials: &Option<LoginCredentials>,
-    cookies_path: &str,
+    cookies_path: Option<String>,
     cookie_store: std::sync::Arc<reqwest::cookie::Jar>,
 ) -> Result<(), String> {
     let new_username = credentials.as_ref().map(|c| c.username.clone());
@@ -53,7 +51,6 @@ pub async fn initialize_client_with_cookies(
             log::info!("Updated basic auth for user: {}", creds.username);
         }
     }
-
     let needs_client_reinit = {
         let current_session = CURRENT_SESSION.lock().await;
         match &*current_session {
@@ -61,7 +58,6 @@ pub async fn initialize_client_with_cookies(
             Some(session) => session.username != new_username,
         }
     };
-
     if !needs_client_reinit {
         log::info!("Client already initialized for current user, auth updated");
         return Ok(());
@@ -70,7 +66,7 @@ pub async fn initialize_client_with_cookies(
     let cookie_store = cookie_store;
     let url = Url::from_str("https://api.vrchat.cloud").expect("Invalid URL");
 
-    match load_and_decrypt_data(cookies_path) {
+    match load_cookies(cookies_path.clone()) {
         Ok(cookies) => {
             log::info!("cookie text: {}", cookies);
             let header_value = HeaderValue::from_str(&cookies).expect("Invalid cookie format");
@@ -81,7 +77,6 @@ pub async fn initialize_client_with_cookies(
             log::warn!("No cookies found in store, proceeding without cookies");
         }
     }
-
     {
         let mut global_client = GLOBAL_API_CLIENT.write().unwrap();
         global_client.config.client = reqwest::Client::builder()
@@ -89,12 +84,11 @@ pub async fn initialize_client_with_cookies(
             .build()
             .unwrap();
     }
-
     {
         let mut current_session = CURRENT_SESSION.lock().await;
         *current_session = Some(CurrentSession {
             username: new_username,
-            cookies_path: cookies_path.to_string(),
+            cookies_path: cookies_path.unwrap_or_default().to_string(),
         });
     }
 
@@ -103,7 +97,7 @@ pub async fn initialize_client_with_cookies(
 
 pub fn save_cookies_from_jar(
     cookie_store: &std::sync::Arc<reqwest::cookie::Jar>,
-    cookies_path: &str,
+    cookies_path: Option<String>,
 ) -> Result<(), String> {
     let cookies: Vec<String> = if let Ok(url) = reqwest::Url::parse("https://api.vrchat.cloud") {
         let cookies = cookie_store
@@ -118,42 +112,33 @@ pub fn save_cookies_from_jar(
         log::log!(log::Level::Error, "Failed to parse URL for cookies");
         Vec::new()
     };
-
     if !cookies.is_empty() {
         let cookie_string = cookies.join("; ");
-
-        encrypt_and_save_data(&cookie_string, cookies_path)
+        save_cookies(&cookie_string, cookies_path.clone())
             .map_err(|e| format!("Failed to encrypt and save cookies: {}", e))?;
-
-        log::info!("Cookies saved successfully to: {}", cookies_path);
+        log::info!("Cookies saved successfully to: {:?}", cookies_path);
     } else {
         log::warn!("No cookies found to save");
     }
-
     Ok(())
 }
 
-static SALT: &str = "fake_salt";
-
-pub fn encrypt_and_save_data(data: &str, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mc = new_magic_crypt!(SALT, 256);
-
-    let encrypted_string = mc.encrypt_str_to_base64(data);
-    let mut file = fs::File::create(filepath)?;
-    file.write_all(encrypted_string.as_bytes())?;
-
-    println!("save cookie to {}", filepath);
+pub fn save_cookies(
+    data: &str,
+    filepath: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let filepath = filepath.unwrap_or_default() + "/satoukan.bin";
+    let mut file = fs::File::create(&filepath)?;
+    file.write_all(data.as_bytes())?;
+    println!("save cookie to {}", &filepath);
     Ok(())
 }
 
-pub fn load_and_decrypt_data(filepath: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let encrypted_string = fs::read_to_string(filepath)?;
-
-    let mc = new_magic_crypt!(SALT, 256);
-    let decrypted_string = mc.decrypt_base64_to_string(&encrypted_string)?;
-
-    println!("load cookie from {}", filepath);
-    Ok(decrypted_string)
+pub fn load_cookies(filepath: Option<String>) -> Result<String, Box<dyn std::error::Error>> {
+    let filepath = filepath.unwrap_or_default() + "/satoukan.bin";
+    let cookie_string = fs::read_to_string(&filepath)?;
+    println!("load cookie from {}", &filepath);
+    Ok(cookie_string)
 }
 
 pub fn create_error_response<T, E>(error: &Error<E>, base_message: &str) -> ApiResponse<T> {

@@ -3,22 +3,21 @@ use crate::client::{
 };
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
-use reqwest::cookie::CookieStore;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
 
 pub async fn auth_and_get_current_user(
     credentials: &Option<LoginCredentials>,
-    cookies_path: &str,
+    cookies_path: Option<String>,
 ) -> ApiResponse<vrchatapi::models::EitherUserOrTwoFactor> {
     let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
     if let Err(e) =
-        initialize_client_with_cookies(credentials, cookies_path, cookie_store.clone()).await
+        initialize_client_with_cookies(credentials, cookies_path.clone(), cookie_store.clone())
+            .await
     {
         return ApiResponse::simple_error(500, format!("Client initialization failed: {}", e));
     }
-
     let client_config = {
         let client = GLOBAL_API_CLIENT.read().unwrap();
         client.config.clone()
@@ -26,7 +25,7 @@ pub async fn auth_and_get_current_user(
 
     match get_current_user(&client_config).await {
         Ok(user) => {
-            if let Err(e) = save_cookies_from_jar(&cookie_store, cookies_path) {
+            if let Err(e) = save_cookies_from_jar(&cookie_store, cookies_path.clone()) {
                 log::error!("Failed to save cookies: {}", e);
             } else {
                 log::info!("Cookies saved successfully after login");
