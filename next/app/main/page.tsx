@@ -14,11 +14,16 @@ import { useRouter } from 'next/navigation';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuthStore } from '../store/authStore';
 import { useClientTranslations } from '../hooks/useClientTranslations';
+import { useTheme } from '../../theme/ThemeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function MainPage() {
   const { t } = useClientTranslations();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
+  const { mode, setMode } = useTheme();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -31,6 +36,10 @@ export default function MainPage() {
     router.push('/login');
   };
 
+  const toggleTheme = () => {
+    setMode(mode === 'light' ? 'dark' : 'light');
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -38,13 +47,38 @@ export default function MainPage() {
   return (
     <Box
       sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="static">
+      <AppBar
+        position="static"
+        sx={{
+          bgcolor: mode === 'dark' ? 'grey.900' : 'white',
+          color: mode === 'dark' ? 'white' : 'text.primary',
+          boxShadow:
+            mode === 'dark'
+              ? '0 2px 4px rgba(255,255,255,0.1)'
+              : '0 2px 4px rgba(0,0,0,0.1)',
+        }}>
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             {t('main.welcome')} {user?.displayName || user?.username}
           </Typography>
 
-          <IconButton color="inherit" onClick={handleLogout} sx={{ ml: 1 }}>
+          <LanguageSwitcher />
+
+          <IconButton
+            onClick={toggleTheme}
+            sx={{
+              ml: 1,
+              color: mode === 'dark' ? 'white' : 'text.primary',
+            }}>
+            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </IconButton>
+
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              ml: 1,
+              color: mode === 'dark' ? 'white' : 'text.primary',
+            }}>
             <LogoutIcon />
           </IconButton>
         </Toolbar>
@@ -61,7 +95,7 @@ export default function MainPage() {
           </Typography>
           <Box
             sx={{
-              backgroundColor: 'grey.100',
+              backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.100',
               p: 2,
               borderRadius: 1,
               maxHeight: 400,
@@ -74,6 +108,7 @@ export default function MainPage() {
                 fontFamily: 'monospace',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
+                color: mode === 'dark' ? '#ffffff' : '#000000',
               }}>
               {JSON.stringify(user, null, 2)}
             </pre>
