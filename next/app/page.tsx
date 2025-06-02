@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
-import { TextField, Button, IconButton, Alert } from '@mui/material';
+import {
+  TextField,
+  Button,
+  IconButton,
+  Alert,
+  Box,
+  Typography,
+  Paper,
+} from '@mui/material';
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useClientTranslations } from './hooks/useClientTranslations';
@@ -62,6 +70,8 @@ export default function Page() {
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
   const [twoFactorError, setTwoFactorError] = useState('');
 
+  const [responseData, setResponseData] = useState<any>(null);
+
   const [currentCredentials, setCurrentCredentials] = useState<{
     username: string;
     password: string;
@@ -89,6 +99,7 @@ export default function Page() {
     try {
       setLoading(true);
       clearMessages();
+      setResponseData(null);
 
       const result = (await invoke('login', {
         credentials: {
@@ -97,28 +108,33 @@ export default function Page() {
         },
       })) as LoginResponse;
 
-      console.log('Login response:', result.data?.requiresTwoFactorAuth);
+      console.log('Login response:', result);
+      setResponseData(result);
 
-      if (result.data?.requiresTwoFactorAuth) {
-        const twoFactorData = result.data.requiresTwoFactorAuth;
-        setCurrentCredentials(credentials);
+      if (result.success && result.data) {
+        if (
+          'requiresTwoFactorAuth' in result.data &&
+          result.data.requiresTwoFactorAuth
+        ) {
+          const twoFactorData = result.data.requiresTwoFactorAuth;
+          setCurrentCredentials(credentials);
 
-        if (twoFactorData.includes('emailOtp')) {
-          setType('email');
+          if (twoFactorData.includes('emailOtp')) {
+            setType('email');
+          } else {
+            setType('2fa');
+          }
+          setTwoFactorOpen(true);
         } else {
-          setType('2fa');
-        }
-        setTwoFactorOpen(true);
-      } else if ('CurrentUser' in result) {
-        const userData = result.CurrentUser;
-        setSuccess(t('login.messages.success'));
-        console.log('Login successful:', userData);
+          setSuccess(t('login.messages.success'));
+          console.log('Login successful:', result.data);
 
-        setUsername('');
-        setPassword('');
-        setCurrentCredentials({ username: '', password: '' });
+          setUsername('');
+          setPassword('');
+          setCurrentCredentials({ username: '', password: '' });
+        }
       } else {
-        setError(t('login.messages.invalidResponseFormat'));
+        setError(result.message || t('login.messages.failed'));
       }
     } catch (error: any) {
       console.error('Login failed:', error);
@@ -166,18 +182,13 @@ export default function Page() {
 
       console.log('2FA verification response:', result);
 
-      let verified = false;
-      // if ('IsA' in result) {
-      //   verified = result.IsA.verified || false;
-      // } else if ('IsB' in result) {
-      //   verified = result.IsB.verified || false;
-      // }
-      verified = result.data?.verified || false;
-
-      if (verified) {
+      if (result.success && result.data?.verified) {
         console.log(
           '2FA verification successful, performing login with cookies...',
         );
+
+        setTwoFactorOpen(false);
+        setTwoFactorError('');
 
         const loginResult = (await invoke('login', {
           credentials: {
@@ -187,24 +198,22 @@ export default function Page() {
         })) as LoginResponse;
 
         console.log('Final login response:', loginResult);
+        setResponseData(loginResult);
 
-        if ('CurrentUser' in loginResult) {
-          const userData = loginResult.CurrentUser;
+        if (loginResult.success && loginResult.data) {
           setSuccess(t('login.messages.success'));
-          console.log('Login successful:', userData);
+          console.log('Login successful:', loginResult.data);
 
           setUsername('');
           setPassword('');
           setCurrentCredentials({ username: '', password: '' });
-          setTwoFactorOpen(false);
-          setTwoFactorError('');
-        } else if ('RequiresTwoFactorAuth' in loginResult) {
-          setTwoFactorError(t('login.messages.additionalVerificationRequired'));
         } else {
-          setTwoFactorError(t('login.messages.invalidResponseFormat'));
+          setError(
+            loginResult.message || t('login.messages.invalidResponseFormat'),
+          );
         }
       } else {
-        setTwoFactorError(t('twoFactor.messages.failed'));
+        setTwoFactorError(result.message || t('twoFactor.messages.failed'));
       }
     } catch (error: any) {
       console.error('2FA verification failed:', error);
@@ -228,54 +237,86 @@ export default function Page() {
         </IconButton>
       </div>
 
-      <div className="mx-auto max-w-md">
-        <h1 className="mb-6 text-2xl font-bold">{t('login.title')}</h1>
+      <div className="mx-auto max-w-4xl">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div>
+            <h1 className="mb-6 text-2xl font-bold">{t('login.title')}</h1>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={clearMessages}>
-            {error}
-          </Alert>
-        )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={clearMessages}>
+                {error}
+              </Alert>
+            )}
 
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={clearMessages}>
-            {success}
-          </Alert>
-        )}
+            {success && (
+              <Alert severity="success" sx={{ mb: 2 }} onClose={clearMessages}>
+                {success}
+              </Alert>
+            )}
 
-        <div className="flex flex-col gap-4">
-          <TextField
-            label={t('login.username')}
-            variant="outlined"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            disabled={loading}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleInitialLogin();
-              }
-            }}
-          />
-          <TextField
-            label={t('login.password')}
-            variant="outlined"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleInitialLogin();
-              }
-            }}
-          />
-          <Button
-            variant="contained"
-            onClick={handleInitialLogin}
-            disabled={loading || !username.trim() || !password.trim()}
-            className="mt-4">
-            {loading ? t('login.loggingIn') : t('login.loginButton')}
-          </Button>
+            <div className="flex flex-col gap-4">
+              <TextField
+                label={t('login.username')}
+                variant="outlined"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleInitialLogin();
+                  }
+                }}
+              />
+              <TextField
+                label={t('login.password')}
+                variant="outlined"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleInitialLogin();
+                  }
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleInitialLogin}
+                disabled={loading || !username.trim() || !password.trim()}
+                className="mt-4">
+                {loading ? t('login.loggingIn') : t('login.loginButton')}
+              </Button>
+            </div>
+          </div>
+
+          {responseData && (
+            <div>
+              <Typography variant="h6" gutterBottom>
+                响应数据
+              </Typography>
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 2,
+                  maxHeight: '600px',
+                  overflow: 'auto',
+                  backgroundColor: mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                }}>
+                <pre
+                  style={{
+                    margin: 0,
+                    fontSize: '12px',
+                    fontFamily:
+                      'Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}>
+                  {JSON.stringify(responseData, null, 2)}
+                </pre>
+              </Paper>
+            </div>
+          )}
         </div>
       </div>
 
