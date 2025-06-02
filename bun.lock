@@ -4,13 +4,13 @@
     "": {
       "name": "botan",
       "dependencies": {
-        "@tauri-apps/plugin-store": "~2",
+        "@tauri-apps/plugin-store": "~2.2.0",
         "next-intl": "^4.1.0",
       },
       "devDependencies": {
-        "@tauri-apps/cli": "^2",
+        "@tauri-apps/cli": "^2.5.0",
         "prettier": "^3.5.3",
-        "prettier-plugin-tailwindcss": "^0.6.11",
+        "prettier-plugin-tailwindcss": "^0.6.12",
       },
     },
     "next": {

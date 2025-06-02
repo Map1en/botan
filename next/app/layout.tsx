@@ -1,7 +1,7 @@
 import './globals.css';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { ThemeProvider } from '@/theme/ThemeContext';
+import { ThemeProvider } from '../theme/ThemeContext';
 
 export default async function RootLayout({
   children,

@@ -36,5 +36,11 @@
   "theme": {
     "toggleDark": "Switch to dark mode",
     "toggleLight": "Switch to light mode"
+  },
+  "main": {
+    "title": "Main Page",
+    "welcome": "Welcome,",
+    "userInfo": "User Information",
+    "logout": "Logout"
   }
 }

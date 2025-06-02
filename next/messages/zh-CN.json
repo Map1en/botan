@@ -36,5 +36,11 @@
   "theme": {
     "toggleDark": "切换到深色模式",
     "toggleLight": "切换到浅色模式"
+  },
+  "main": {
+    "title": "主页面",
+    "welcome": "欢迎,",
+    "userInfo": "用户信息",
+    "logout": "退出登录"
   }
 }
