@@ -43,7 +43,6 @@ export default function LoginPage() {
     password: string;
   }>({ username: '', password: '' });
 
-  // 如果已经登录，重定向到主页
   useEffect(() => {
     if (isAuthenticated) {
       router.push('/main');
@@ -83,7 +82,6 @@ export default function LoginPage() {
           }
           setTwoFactorOpen(true);
         } else {
-          // 登录成功，设置用户信息并跳转
           setUser(result.data);
           router.push('/main');
         }
@@ -107,7 +105,6 @@ export default function LoginPage() {
       const result = await verify2FA(currentCredentials, code.trim(), type);
 
       if (result.success && result.data) {
-        // 2FA验证成功，跳转到主页
         setTwoFactorOpen(false);
         router.push('/main');
       } else {
@@ -136,7 +133,6 @@ export default function LoginPage() {
         justifyContent: 'center',
         position: 'relative',
       }}>
-      {/* 右上角的控制按钮 */}
       <Box
         sx={{
           position: 'absolute',
@@ -155,7 +151,6 @@ export default function LoginPage() {
         </IconButton>
       </Box>
 
-      {/* 登录表单 */}
       <Box sx={{ maxWidth: 400, width: '100%', p: 3 }}>
         <Typography
           variant="h5"

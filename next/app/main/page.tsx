@@ -20,7 +20,6 @@ export default function MainPage() {
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
 
-  // 如果未登录，重定向到登录页
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
@@ -32,7 +31,6 @@ export default function MainPage() {
     router.push('/login');
   };
 
-  // 如果未登录，不渲染内容
   if (!isAuthenticated) {
     return null;
   }

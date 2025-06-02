@@ -38,13 +38,11 @@ interface AuthActions {
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
     (set, get) => ({
-      // State
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
 
-      // Actions
       login: async (credentials) => {
         set({ isLoading: true, error: null });
 
@@ -72,7 +70,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           })) as { success: boolean; data?: { verified: boolean } };
 
           if (result.success && result.data?.verified) {
-            // 2FA验证成功，重新登录获取完整用户信息
             const loginResult = (await invoke('login', { credentials })) as {
               success: boolean;
               data?: CurrentUser;
