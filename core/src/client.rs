@@ -127,7 +127,7 @@ pub fn save_cookies(
     data: &str,
     filepath: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let filepath = filepath.unwrap_or_default() + "/satoukan.bin";
+    let filepath = filepath.unwrap_or_default() + "/satou.bin";
     let mut file = fs::File::create(&filepath)?;
     file.write_all(data.as_bytes())?;
     println!("save cookie to {}", &filepath);
@@ -135,7 +135,7 @@ pub fn save_cookies(
 }
 
 pub fn load_cookies(filepath: Option<String>) -> Result<String, Box<dyn std::error::Error>> {
-    let filepath = filepath.unwrap_or_default() + "/satoukan.bin";
+    let filepath = filepath.unwrap_or_default() + "/satou.bin";
     let cookie_string = fs::read_to_string(&filepath)?;
     println!("load cookie from {}", &filepath);
     Ok(cookie_string)
