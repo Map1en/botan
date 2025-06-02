@@ -10,7 +10,7 @@ fn get_cookies_path(app_handle: &tauri::AppHandle) -> String {
         .path()
         .app_config_dir()
         .expect("Failed to get app config directory")
-        .join("web.dat");
+        .join("satou.bin");
     cookies_path_buf
         .to_str()
         .expect("Failed to convert path to string")
@@ -26,7 +26,7 @@ pub async fn login(
 
     let cookies_path = get_cookies_path(&app_handle);
 
-    log::info!("cookies path11111111: {}", cookies_path);
+    log::info!("cookies path: {}", cookies_path);
 
     auth_and_get_current_user(&credentials, &cookies_path).await
 }

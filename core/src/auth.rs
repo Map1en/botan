@@ -3,6 +3,7 @@ use crate::client::{
 };
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
+use reqwest::cookie::CookieStore;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
@@ -25,13 +26,14 @@ pub async fn auth_and_get_current_user(
 
     match get_current_user(&client_config).await {
         Ok(user) => {
+            if let Err(e) = save_cookies_from_jar(&cookie_store, cookies_path) {
+                log::error!("Failed to save cookies: {}", e);
+            } else {
+                log::info!("Cookies saved successfully after login");
+            }
             match &user {
                 vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
                     log::info!("Login successful for user: {}", current_user.display_name);
-                    save_cookies_from_jar(&cookie_store, cookies_path).unwrap_or_else(|e| {
-                        log::error!("Failed to save cookies: {}", e);
-                        eprintln!("Failed to save cookies: {}", e);
-                    });
                 }
                 vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(_) => {
                     log::info!("2FA required, not saving cookies yet");
@@ -41,9 +43,7 @@ pub async fn auth_and_get_current_user(
             ApiResponse::success(user, None)
         }
         Err(e) => {
-            eprintln!("Failed to login: {}", e);
-            log::debug!("Failed to login: {}", e);
-
+            log::info!("Failed to login: {}", e);
             create_error_response(&e, "Failed to login")
         }
     }

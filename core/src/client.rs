@@ -45,7 +45,16 @@ pub async fn initialize_client_with_cookies(
 ) -> Result<(), String> {
     let new_username = credentials.as_ref().map(|c| c.username.clone());
 
-    let needs_reinit = {
+    {
+        let mut global_client = GLOBAL_API_CLIENT.write().unwrap();
+        if let Some(creds) = credentials {
+            let new_auth = (creds.username.clone(), Some(creds.password.clone()));
+            global_client.config.basic_auth = Some(new_auth);
+            log::info!("Updated basic auth for user: {}", creds.username);
+        }
+    }
+
+    let needs_client_reinit = {
         let current_session = CURRENT_SESSION.lock().await;
         match &*current_session {
             None => true,
@@ -53,8 +62,8 @@ pub async fn initialize_client_with_cookies(
         }
     };
 
-    if !needs_reinit {
-        log::info!("Client already initialized for current user, skipping");
+    if !needs_client_reinit {
+        log::info!("Client already initialized for current user, auth updated");
         return Ok(());
     }
 
@@ -75,12 +84,6 @@ pub async fn initialize_client_with_cookies(
 
     {
         let mut global_client = GLOBAL_API_CLIENT.write().unwrap();
-
-        if let Some(creds) = credentials {
-            global_client.config.basic_auth =
-                Some((creds.username.clone(), Some(creds.password.clone())));
-        }
-
         global_client.config.client = reqwest::Client::builder()
             .cookie_provider(cookie_store)
             .build()
@@ -102,13 +105,19 @@ pub fn save_cookies_from_jar(
     cookie_store: &std::sync::Arc<reqwest::cookie::Jar>,
     cookies_path: &str,
 ) -> Result<(), String> {
-    let url = reqwest::Url::parse("https://api.vrchat.cloud").unwrap();
-
-    let cookies: Vec<String> = cookie_store
-        .cookies(&url)
-        .iter()
-        .filter_map(|cookie| cookie.to_str().ok().map(|s| s.to_string()))
-        .collect();
+    let cookies: Vec<String> = if let Ok(url) = reqwest::Url::parse("https://api.vrchat.cloud") {
+        let cookies = cookie_store
+            .cookies(&url)
+            .iter()
+            .filter_map(|c| c.to_str().ok())
+            .map(|s| s.to_string())
+            .collect();
+        log::info!("Cookies for https://api.vrchat.cloud: {:?}", cookies);
+        cookies
+    } else {
+        log::log!(log::Level::Error, "Failed to parse URL for cookies");
+        Vec::new()
+    };
 
     if !cookies.is_empty() {
         let cookie_string = cookies.join("; ");
