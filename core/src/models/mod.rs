@@ -7,7 +7,8 @@ use vrchatapi::models::{
 #[derive(Deserialize, Debug, Clone)]
 pub struct LoginCredentials {
     pub username: String,
-    pub password: String,
+    pub password: Option<String>,
+    pub auto_login_user_id: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -55,11 +56,11 @@ pub enum EitherTwoFactorResultType {
     IsB(Verify2FaEmailCodeResult),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct CurrentSession {
-    pub username: Option<String>,
-    pub cookies_path: String,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct CurrentSession {
+//     pub username: Option<String>,
+//     pub cookies_path: String,
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TwoFactorVerifyResult {

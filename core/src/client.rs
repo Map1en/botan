@@ -1,5 +1,5 @@
 use crate::models::response::ApiResponse;
-use crate::models::{CurrentSession, LoginCredentials};
+use crate::models::LoginCredentials;
 use reqwest::cookie::CookieStore;
 use reqwest::header::HeaderValue;
 use reqwest::Url;
@@ -12,8 +12,7 @@ pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::configuration::Configuration;
 use vrchatapi::apis::Error;
 
-static CURRENT_SESSION: LazyLock<Mutex<Option<CurrentSession>>> =
-    LazyLock::new(|| Mutex::new(None));
+static CURRENT_USER_ID: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| Mutex::new(None));
 
 pub static GLOBAL_API_CLIENT: LazyLock<RwLock<VrcApiClient>> =
     LazyLock::new(|| RwLock::new(VrcApiClient::new()));
@@ -39,23 +38,28 @@ impl VrcApiClient {
 pub async fn initialize_client_with_cookies(
     credentials: &Option<LoginCredentials>,
     cookies_path: Option<String>,
-    cookie_store: std::sync::Arc<reqwest::cookie::Jar>,
+    cookie_store: std::sync::Arc<reqwest_cookie_store::CookieStoreMutex>,
 ) -> Result<(), String> {
-    let new_username = credentials.as_ref().map(|c| c.username.clone());
+    let new_auto_login_user_id = credentials
+        .as_ref()
+        .and_then(|c| c.auto_login_user_id.clone());
 
     {
         let mut global_client = GLOBAL_API_CLIENT.write().unwrap();
         if let Some(creds) = credentials {
-            let new_auth = (creds.username.clone(), Some(creds.password.clone()));
+            let new_auth = (creds.username.clone(), creds.password.clone());
             global_client.config.basic_auth = Some(new_auth);
             log::info!("Updated basic auth for user: {}", creds.username);
+            if creds.password.as_ref().map_or(true, |s| s.is_empty()) {
+                log::info!("no username and pwd, try auto login")
+            }
         }
     }
     let needs_client_reinit = {
-        let current_session = CURRENT_SESSION.lock().await;
-        match &*current_session {
+        let current_user_id = CURRENT_USER_ID.lock().await;
+        match &*current_user_id {
             None => true,
-            Some(session) => session.username != new_username,
+            Some(user_id) => Some(user_id) != new_auto_login_user_id.as_ref(),
         }
     };
     if !needs_client_reinit {
@@ -85,18 +89,15 @@ pub async fn initialize_client_with_cookies(
             .unwrap();
     }
     {
-        let mut current_session = CURRENT_SESSION.lock().await;
-        *current_session = Some(CurrentSession {
-            username: new_username,
-            cookies_path: cookies_path.unwrap_or_default().to_string(),
-        });
+        let mut current_session = CURRENT_USER_ID.lock().await;
+        *current_session = new_auto_login_user_id;
     }
 
     Ok(())
 }
 
 pub fn save_cookies_from_jar(
-    cookie_store: &std::sync::Arc<reqwest::cookie::Jar>,
+    cookie_store: &std::sync::Arc<reqwest_cookie_store::CookieStoreMutex>,
     cookies_path: Option<String>,
 ) -> Result<(), String> {
     let cookies: Vec<String> = if let Ok(url) = reqwest::Url::parse("https://api.vrchat.cloud") {
