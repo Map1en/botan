@@ -63,5 +63,17 @@
       "twoFactorDisabled": "双因素验证已禁用",
       "ageVerified": "年龄已验证"
     }
+  },
+  "friend": {
+    "title": "好友",
+    "searchPlaceholder": "搜索好友...",
+    "status": {
+      "online": "在线",
+      "active": "活跃",
+      "offline": "离线",
+      "unknown": "未知"
+    },
+    "noSearchResults": "没有找到匹配的好友",
+    "noFriends": "暂无好友"
   }
 }

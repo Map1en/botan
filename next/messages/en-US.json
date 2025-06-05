@@ -63,5 +63,17 @@
       "twoFactorDisabled": "2FA Disabled",
       "ageVerified": "Age Verified"
     }
+  },
+  "friend": {
+    "title": "Friends",
+    "searchPlaceholder": "Search friends...",
+    "status": {
+      "online": "Online",
+      "active": "Active",
+      "offline": "Offline",
+      "unknown": "Unknown"
+    },
+    "noSearchResults": "No matching friends found",
+    "noFriends": "No friends"
   }
 }

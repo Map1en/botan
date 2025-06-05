@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Paper,
@@ -18,12 +18,17 @@ import { useTheme } from '../../theme/ThemeContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import DraggableFloatingBox, {
+  FloatingActionButton,
+} from '../components/FriendBox';
+import FriendList from '../components/FriendList';
 
 export default function MainPage() {
   const { t } = useClientTranslations();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
   const { mode, setMode } = useTheme();
+  const [showFloatingBox, setShowFloatingBox] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -99,15 +104,12 @@ export default function MainPage() {
             <div className="flex flex-col items-center md:items-start">
               <div className="mb-4 h-32 w-32 overflow-hidden rounded-full bg-gray-200">
                 <img
-                  src={
-                    user?.currentAvatarThumbnailImageUrl ||
-                    '/default-avatar.png'
-                  }
+                  src={user?.currentAvatarThumbnailImageUrl}
                   alt="Avatar"
                   className="h-full w-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = '/default-avatar.png';
-                  }}
+                  // onError={(e) => {
+                  //   e.currentTarget.src = '/default-avatar.png';
+                  // }}
                 />
               </div>
               <div className="text-center md:text-left">
@@ -253,6 +255,19 @@ export default function MainPage() {
           </Button>
         </div>
       </div>
+
+      {!showFloatingBox && (
+        <FloatingActionButton onClick={() => setShowFloatingBox(true)} />
+      )}
+
+      {showFloatingBox && (
+        <DraggableFloatingBox
+          title={t('friend.title')}
+          onClose={() => setShowFloatingBox(false)}
+          initialPosition={{ x: 50, y: 150 }}>
+          <FriendList />
+        </DraggableFloatingBox>
+      )}
     </Box>
   );
 }
