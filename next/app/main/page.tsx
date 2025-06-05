@@ -95,19 +95,148 @@ export default function MainPage() {
             {t('main.userInfo')}
           </Typography>
 
-          <div
-            className="max-h-96 overflow-auto rounded-lg p-4"
-            style={{
-              backgroundColor: mode === 'dark' ? '#424242' : '#f5f5f5',
-            }}>
-            <pre
-              className="font-mono text-xs break-words whitespace-pre-wrap"
-              style={{
-                margin: 0,
-                color: mode === 'dark' ? '#ffffff' : '#000000',
-              }}>
-              {JSON.stringify(user, null, 2)}
-            </pre>
+          <div className="flex flex-col gap-6 md:flex-row">
+            <div className="flex flex-col items-center md:items-start">
+              <div className="mb-4 h-32 w-32 overflow-hidden rounded-full bg-gray-200">
+                <img
+                  src={
+                    user?.currentAvatarThumbnailImageUrl ||
+                    '/default-avatar.png'
+                  }
+                  alt="Avatar"
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = '/default-avatar.png';
+                  }}
+                />
+              </div>
+              <div className="text-center md:text-left">
+                <Typography variant="h5" className="mb-2 font-bold">
+                  {user?.displayName}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  className="mb-1">
+                  @{user?.username}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  ID: {user?.id}
+                </Typography>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Typography
+                    variant="subtitle2"
+                    className="mb-1 font-semibold">
+                    Account Status
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-3 w-3 rounded-full ${
+                        user?.status === 'active'
+                          ? 'bg-green-500'
+                          : 'bg-gray-500'
+                      }`}
+                    />
+                    <Typography variant="body2">
+                      {user?.status} ({user?.state})
+                    </Typography>
+                  </div>
+                </div>
+
+                <div>
+                  <Typography
+                    variant="subtitle2"
+                    className="mb-1 font-semibold">
+                    Last Login
+                  </Typography>
+                  <Typography variant="body2">
+                    {user?.last_login
+                      ? new Date(user.last_login).toLocaleDateString()
+                      : 'N/A'}
+                  </Typography>
+                </div>
+
+                <div>
+                  <Typography
+                    variant="subtitle2"
+                    className="mb-1 font-semibold">
+                    Join Date
+                  </Typography>
+                  <Typography variant="body2">
+                    {user?.date_joined
+                      ? new Date(user.date_joined).toLocaleDateString()
+                      : 'N/A'}
+                  </Typography>
+                </div>
+
+                <div>
+                  <Typography
+                    variant="subtitle2"
+                    className="mb-1 font-semibold">
+                    Platform
+                  </Typography>
+                  <Typography variant="body2">
+                    {user?.last_platform || 'Unknown'}
+                  </Typography>
+                </div>
+              </div>
+
+              <div>
+                <Typography variant="subtitle2" className="mb-2 font-semibold">
+                  Security & Verification
+                </Typography>
+                <div className="flex flex-wrap gap-2">
+                  <div
+                    className={`rounded-full px-3 py-1 text-xs ${
+                      user?.emailVerified
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                    Email {user?.emailVerified ? 'Verified' : 'Not Verified'}
+                  </div>
+                  <div
+                    className={`rounded-full px-3 py-1 text-xs ${
+                      user?.twoFactorAuthEnabled
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    2FA {user?.twoFactorAuthEnabled ? 'Enabled' : 'Disabled'}
+                  </div>
+                  {user?.ageVerified && (
+                    <div className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-800">
+                      Age Verified
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {user?.bio && (
+                <div>
+                  <Typography
+                    variant="subtitle2"
+                    className="mb-1 font-semibold">
+                    Bio
+                  </Typography>
+                  <Typography variant="body2">{user.bio}</Typography>
+                </div>
+              )}
+
+              <div>
+                <Typography variant="subtitle2" className="mb-1 font-semibold">
+                  Friends
+                </Typography>
+                <Typography variant="body2">
+                  Active: {user?.activeFriends?.length || 0} | Online:{' '}
+                  {user?.onlineFriends?.length || 0} | Total:{' '}
+                  {user?.friends?.length || 0}
+                </Typography>
+              </div>
+            </div>
           </div>
         </Paper>
 
