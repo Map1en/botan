@@ -132,7 +132,7 @@ export default function MainPage() {
                   <Typography
                     variant="subtitle2"
                     className="mb-1 font-semibold">
-                    Account Status
+                    {t('main.profile.accountStatus')}
                   </Typography>
                   <div className="flex items-center gap-2">
                     <div
@@ -152,12 +152,12 @@ export default function MainPage() {
                   <Typography
                     variant="subtitle2"
                     className="mb-1 font-semibold">
-                    Last Login
+                    {t('main.profile.lastLogin')}
                   </Typography>
                   <Typography variant="body2">
                     {user?.last_login
                       ? new Date(user.last_login).toLocaleDateString()
-                      : 'N/A'}
+                      : t('common.notAvailable')}
                   </Typography>
                 </div>
 
@@ -165,12 +165,12 @@ export default function MainPage() {
                   <Typography
                     variant="subtitle2"
                     className="mb-1 font-semibold">
-                    Join Date
+                    {t('main.profile.joinDate')}
                   </Typography>
                   <Typography variant="body2">
                     {user?.date_joined
                       ? new Date(user.date_joined).toLocaleDateString()
-                      : 'N/A'}
+                      : t('common.notAvailable')}
                   </Typography>
                 </div>
 
@@ -178,17 +178,17 @@ export default function MainPage() {
                   <Typography
                     variant="subtitle2"
                     className="mb-1 font-semibold">
-                    Platform
+                    {t('main.profile.platform')}
                   </Typography>
                   <Typography variant="body2">
-                    {user?.last_platform || 'Unknown'}
+                    {user?.last_platform || t('common.unknown')}
                   </Typography>
                 </div>
               </div>
 
               <div>
                 <Typography variant="subtitle2" className="mb-2 font-semibold">
-                  Security & Verification
+                  {t('main.security.title')}
                 </Typography>
                 <div className="flex flex-wrap gap-2">
                   <div
@@ -197,7 +197,9 @@ export default function MainPage() {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                    Email {user?.emailVerified ? 'Verified' : 'Not Verified'}
+                    {user?.emailVerified
+                      ? t('main.security.emailVerified')
+                      : t('main.security.emailNotVerified')}
                   </div>
                   <div
                     className={`rounded-full px-3 py-1 text-xs ${
@@ -205,11 +207,13 @@ export default function MainPage() {
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                    2FA {user?.twoFactorAuthEnabled ? 'Enabled' : 'Disabled'}
+                    {user?.twoFactorAuthEnabled
+                      ? t('main.security.twoFactorEnabled')
+                      : t('main.security.twoFactorDisabled')}
                   </div>
                   {user?.ageVerified && (
                     <div className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-800">
-                      Age Verified
+                      {t('main.security.ageVerified')}
                     </div>
                   )}
                 </div>
@@ -220,7 +224,7 @@ export default function MainPage() {
                   <Typography
                     variant="subtitle2"
                     className="mb-1 font-semibold">
-                    Bio
+                    {t('main.profile.bio')}
                   </Typography>
                   <Typography variant="body2">{user.bio}</Typography>
                 </div>
@@ -228,12 +232,12 @@ export default function MainPage() {
 
               <div>
                 <Typography variant="subtitle2" className="mb-1 font-semibold">
-                  Friends
+                  {t('main.profile.friends')}
                 </Typography>
                 <Typography variant="body2">
-                  Active: {user?.activeFriends?.length || 0} | Online:{' '}
-                  {user?.onlineFriends?.length || 0} | Total:{' '}
-                  {user?.friends?.length || 0}
+                  {t('common.active')}: {user?.activeFriends?.length || 0} |{' '}
+                  {t('common.online')}: {user?.onlineFriends?.length || 0} |{' '}
+                  {t('common.total')}: {user?.friends?.length || 0}
                 </Typography>
               </div>
             </div>
