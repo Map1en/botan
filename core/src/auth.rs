@@ -1,33 +1,29 @@
-use crate::client::{
-    create_error_response, initialize_client_with_cookies, save_cookies_from_jar, GLOBAL_API_CLIENT,
-};
+use crate::client::{create_error_response, initialize_client_with_cookies, GLOBAL_API_CLIENT};
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
-use reqwest_cookie_store::CookieStore;
+// use reqwest_cookie_store::CookieStore;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
 
-pub async fn auth_and_get_current_user(
+pub async fn auth_login_and_get_current_user(
     credentials: &Option<LoginCredentials>,
-    cookies_path: Option<String>,
+    // cookies_path: Option<String>,
 ) -> ApiResponse<vrchatapi::models::EitherUserOrTwoFactor> {
     let cookie_store = {
-        if let Ok(file) = std::fs::File::open("cookies.json").map(std::io::BufReader::new) {
-            reqwest_cookie_store::CookieStore::load_json(file).unwrap()
-        } else {
-            reqwest_cookie_store::CookieStore::new(None)
-        }
+        // if let Ok(file) = std::fs::File::open("cookies.json").map(std::io::BufReader::new) {
+        //     reqwest_cookie_store::CookieStore::load_json(file).unwrap()
+        // } else
+        // {
+        reqwest_cookie_store::CookieStore::new(None)
+        // }
     };
 
     let cookie_store = reqwest_cookie_store::CookieStoreMutex::new(cookie_store);
     let cookie_store = std::sync::Arc::new(cookie_store);
 
     // let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
-    if let Err(e) =
-        initialize_client_with_cookies(credentials, cookies_path.clone(), cookie_store.clone())
-            .await
-    {
+    if let Err(e) = initialize_client_with_cookies(credentials, cookie_store.clone()).await {
         return ApiResponse::simple_error(500, format!("Client initialization failed: {}", e));
     }
     let client_config = {
@@ -37,11 +33,11 @@ pub async fn auth_and_get_current_user(
 
     match get_current_user(&client_config).await {
         Ok(user) => {
-            if let Err(e) = save_cookies_from_jar(&cookie_store.clone(), cookies_path.clone()) {
-                log::error!("Failed to save cookies: {}", e);
-            } else {
-                log::info!("Cookies saved successfully after login");
-            }
+            // if let Err(e) = save_cookies_from_jar(&cookie_store.clone(), cookies_path.clone()) {
+            //     log::error!("Failed to save cookies: {}", e);
+            // } else {
+            //     log::info!("Cookies saved successfully after login");
+            // }
             match &user {
                 vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
                     log::info!("Login successful for user: {}", current_user.display_name);
@@ -60,7 +56,7 @@ pub async fn auth_and_get_current_user(
     }
 }
 
-pub async fn verify2_fa(
+pub async fn auth_verify2_fa(
     two_fa_type: &str,
     code: EitherTwoFactorAuthCodeType,
 ) -> ApiResponse<TwoFactorVerifyResult> {
