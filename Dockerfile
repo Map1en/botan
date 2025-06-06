@@ -10,11 +10,8 @@ WORKDIR /usr/src/app
 
 COPY Cargo.toml Cargo.lock ./
 
-COPY src-tauri/Cargo.toml ./src-tauri/Cargo.toml
-COPY core/Cargo.toml ./core/Cargo.toml
-COPY worker/Cargo.toml ./worker/Cargo.toml
+RUN sed -i '/"src-tauri"/d' Cargo.toml
 
-COPY src-tauri/src ./src-tauri/src
 COPY core ./core/
 COPY worker ./worker/
 
