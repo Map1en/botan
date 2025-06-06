@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 
 RUN sed -i '/"src-tauri"/d' Cargo.toml
 
