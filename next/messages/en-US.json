@@ -2,7 +2,12 @@
   "common": {
     "loading": "Loading...",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "notAvailable": "N/A",
+    "unknown": "Unknown",
+    "active": "Active",
+    "online": "Online",
+    "total": "Total"
   },
   "login": {
     "title": "Login",
@@ -41,6 +46,34 @@
     "title": "Main Page",
     "welcome": "Welcome,",
     "userInfo": "User Information",
-    "logout": "Logout"
+    "logout": "Logout",
+    "profile": {
+      "accountStatus": "Account Status",
+      "lastLogin": "Last Login",
+      "joinDate": "Join Date",
+      "platform": "Platform",
+      "bio": "Bio",
+      "friends": "Friends"
+    },
+    "security": {
+      "title": "Security & Verification",
+      "emailVerified": "Email Verified",
+      "emailNotVerified": "Email Not Verified",
+      "twoFactorEnabled": "2FA Enabled",
+      "twoFactorDisabled": "2FA Disabled",
+      "ageVerified": "Age Verified"
+    }
+  },
+  "friend": {
+    "title": "Friends",
+    "searchPlaceholder": "Search friends...",
+    "status": {
+      "online": "Online",
+      "active": "Active",
+      "offline": "Offline",
+      "unknown": "Unknown"
+    },
+    "noSearchResults": "No matching friends found",
+    "noFriends": "No friends"
   }
 }
