@@ -31,7 +31,7 @@ pub async fn login(
         credentials
     );
     // let cookies_path = get_cookies_path(&app_handle);
-    auth_login_and_get_current_user(&credentials).await
+    auth_login_and_get_current_user(&credentials, &Some(true)).await
 }
 
 #[tauri::command]

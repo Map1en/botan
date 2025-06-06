@@ -1,9 +1,11 @@
 use botan_core::auth;
 use botan_core::models::{EitherTwoFactorAuthCodeType, LoginCredentials};
 use botan_core::vrchatapi_models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode};
+use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     env_logger::init();
 
     let username = std::env::var("USERNAME").expect("NO USERNAME");
@@ -14,7 +16,7 @@ async fn main() {
         auto_login_user_id: None,
     });
 
-    match auth::auth_login_and_get_current_user(&credentials).await {
+    match auth::auth_login_and_get_current_user(&credentials, &Some(true)).await {
         //
         api_response if api_response.success => match api_response.data {
             Some(EitherUserOrTwoFactor::CurrentUser(user)) => {

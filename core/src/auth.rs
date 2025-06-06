@@ -1,57 +1,99 @@
-use crate::client::{create_error_response, initialize_client_with_cookies, GLOBAL_API_CLIENT};
+use crate::client::{create_error_response, GLOBAL_API_CLIENT};
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
-// use reqwest_cookie_store::CookieStore;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
 
 pub async fn auth_login_and_get_current_user(
     credentials: &Option<LoginCredentials>,
-    // cookies_path: Option<String>,
+    is_first_login: &Option<bool>,
 ) -> ApiResponse<vrchatapi::models::EitherUserOrTwoFactor> {
-    let cookie_store = {
-        // if let Ok(file) = std::fs::File::open("cookies.json").map(std::io::BufReader::new) {
-        //     reqwest_cookie_store::CookieStore::load_json(file).unwrap()
-        // } else
-        // {
-        reqwest_cookie_store::CookieStore::new(None)
-        // }
-    };
-
-    let cookie_store = reqwest_cookie_store::CookieStoreMutex::new(cookie_store);
-    let cookie_store = std::sync::Arc::new(cookie_store);
-
-    // let cookie_store = std::sync::Arc::new(reqwest::cookie::Jar::default());
-    if let Err(e) = initialize_client_with_cookies(credentials, cookie_store.clone()).await {
-        return ApiResponse::simple_error(500, format!("Client initialization failed: {}", e));
-    }
-    let client_config = {
-        let client = GLOBAL_API_CLIENT.read().unwrap();
-        client.config.clone()
-    };
-
-    match get_current_user(&client_config).await {
-        Ok(user) => {
-            // if let Err(e) = save_cookies_from_jar(&cookie_store.clone(), cookies_path.clone()) {
-            //     log::error!("Failed to save cookies: {}", e);
-            // } else {
-            //     log::info!("Cookies saved successfully after login");
-            // }
-            match &user {
-                vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
-                    log::info!("Login successful for user: {}", current_user.display_name);
-                }
-                vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(_) => {
-                    log::info!("2FA required, not saving cookies yet");
-                }
+    let cookie_store_arc = if let Some(true) = is_first_login {
+        let cookie_store = {
+            if let Ok(file) = std::fs::File::open("cookies.json") {
+                let reader = std::io::BufReader::new(file);
+                serde_json::from_reader(reader)
+                    .unwrap_or_else(|_| reqwest_cookie_store::CookieStore::new(None))
+            } else {
+                reqwest_cookie_store::CookieStore::new(None)
             }
+        };
+        let cookie_store_arc =
+            std::sync::Arc::new(reqwest_cookie_store::CookieStoreMutex::new(cookie_store));
 
-            ApiResponse::success(user, None)
+        let mut global_client = GLOBAL_API_CLIENT.write().unwrap();
+        if let Some(creds) = credentials {
+            global_client.config.basic_auth =
+                Some((creds.username.clone(), creds.password.clone()));
+            log::info!("Updated basic auth for user: {}", creds.username);
         }
-        Err(e) => {
-            log::info!("Failed to login: {}", e);
-            create_error_response(&e, "Failed to login")
+        global_client.config.client = reqwest::Client::builder()
+            .cookie_provider(cookie_store_arc.clone())
+            .build()
+            .unwrap();
+
+        Some(cookie_store_arc)
+    } else {
+        None
+    };
+
+    loop {
+        let client_config = {
+            let client = GLOBAL_API_CLIENT.read().unwrap();
+            client.config.clone()
+        };
+
+        match get_current_user(&client_config).await {
+            Ok(user_or_2fa) => match &user_or_2fa {
+                vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
+                    println!("Login successful for user: {}", current_user.display_name);
+                    if let Some(cookie_store) = &cookie_store_arc {
+                        let mut writer = std::fs::File::create("cookies.json")
+                            .map(std::io::BufWriter::new)
+                            .unwrap();
+                        let store = cookie_store.lock().unwrap();
+                        serde_json::to_writer(&mut writer, &*store).unwrap();
+                        log::info!("Cookies saved successfully.");
+                    }
+                    return ApiResponse::success(user_or_2fa, None);
+                }
+                vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(u) => {
+                    log::info!("2FA required: {:?}", u);
+                    println!("Please enter your 2FA code:");
+
+                    let mut guess = String::new();
+                    if std::io::stdin().read_line(&mut guess).is_err() {
+                        return ApiResponse::simple_error(
+                            500,
+                            "Failed to read 2FA code from stdin".to_string(),
+                        );
+                    }
+
+                    let verify_result = auth_verify2_fa(
+                        "2fa",
+                        EitherTwoFactorAuthCodeType::IsA(vrchatapi::models::TwoFactorAuthCode {
+                            code: guess.trim().to_string(),
+                        }),
+                    )
+                    .await;
+
+                    if verify_result.success {
+                        log::info!("2FA verification successful. Retrying login...");
+                        continue;
+                    } else {
+                        log::error!("2FA verification failed: {:?}", verify_result);
+                        return ApiResponse::simple_error(
+                            401,
+                            "2FA verification failed".to_string(),
+                        );
+                    }
+                }
+            },
+            Err(e) => {
+                log::error!("Failed to login: {}", e);
+                return create_error_response(&e, "Failed to login");
+            }
         }
     }
 }
@@ -67,6 +109,7 @@ pub async fn auth_verify2_fa(
 
     match two_fa_type {
         "2fa" => {
+            log::info!("aff{:?}", code);
             if let EitherTwoFactorAuthCodeType::IsA(auth_code) = code {
                 match vrchatapi::apis::authentication_api::verify2_fa(
                     &client_config,
