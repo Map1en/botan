@@ -8,6 +8,10 @@ async fn main() {
     dotenv().ok();
     env_logger::init();
 
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let username = std::env::var("USERNAME").expect("NO USERNAME");
     let password = std::env::var("PASSWORD").expect("NO PASSWORD");
     let credentials = Some(LoginCredentials {

@@ -1,6 +1,7 @@
 use crate::client::{create_error_response, GLOBAL_API_CLIENT};
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
+use crate::pipeline;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
@@ -55,8 +56,18 @@ pub async fn auth_login_and_get_current_user(
                         let store = cookie_store.lock().unwrap();
                         serde_json::to_writer(&mut writer, &*store).unwrap();
                         log::info!("Cookies saved successfully.");
+                    };
+                    match pipeline_auth().await {
+                        Ok(token) => {
+                            println!("token result: {:?}", token.clone());
+                            let pipeline_handler = pipeline::PipelineHandler::new();
+                            let _ = pipeline_handler.listen(&token.token).await;
+                            // return ApiResponse::success(token.token, None);
+                        }
+                        Err(e) => {
+                            log::error!("Pipeline auth failed: {:?}", e);
+                        }
                     }
-                    return ApiResponse::success(user_or_2fa, None);
                 }
                 vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(u) => {
                     log::info!("2FA required: {:?}", u);
@@ -175,6 +186,22 @@ pub async fn verify_auth(
         Ok(result) => Ok(result),
         Err(e) => {
             log::error!("Failed to verify auth token: {:?}", e);
+            Err(e)
+        }
+    }
+}
+
+pub async fn pipeline_auth(
+) -> Result<vrchatapi::models::VerifyAuthTokenResult, Error<VerifyAuthTokenError>> {
+    let client_config = {
+        let client = GLOBAL_API_CLIENT.read().unwrap();
+        client.config.clone()
+    };
+
+    match vrchatapi::apis::authentication_api::verify_auth_token(&client_config).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            log::error!("pipeline_auth failed: {:?}", e);
             Err(e)
         }
     }

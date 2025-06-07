@@ -15,7 +15,7 @@ thiserror = "2.0.12"
 vrchatapi = "1.19.3"
 magic-crypt = "4.0.1"
 reqwest_cookie_store = "0.8.0"
-tokio-tungstenite = { version = "0.26.2", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.26.2", features = ["rustls-tls-native-roots"] }
 futures-util = "0.3.31"
 sea-orm = { version = "1.1.12", features = [
     "sqlx-postgres",
@@ -25,3 +25,4 @@ sea-orm = { version = "1.1.12", features = [
 ] }
 chrono = { version = "0.4.41", features = ["serde"] }
 anyhow = "1.0.98"
+url = "2.5.4"
