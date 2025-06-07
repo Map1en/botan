@@ -149,7 +149,7 @@ export default function FriendList() {
           bgcolor: mode === 'dark' ? '#000000' : 'background.default',
           border: mode === 'dark' ? '1px solid #333' : '1px solid #e0e0e0',
         }}>
-        <div className="flex-shrink-0">
+        {/* <div className="flex-shrink-0">
           <Box>
             <TextField
               fullWidth
@@ -164,9 +164,9 @@ export default function FriendList() {
               }}
             />
           </Box>
-        </div>
+        </div> */}
 
-        <div className="flex-1 overflow-auto">
+        <div className="max-h-[500px] flex-1 overflow-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Box>
             <Accordion
               defaultExpanded
