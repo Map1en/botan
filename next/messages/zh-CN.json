@@ -2,7 +2,12 @@
   "common": {
     "loading": "加载中...",
     "cancel": "取消",
-    "close": "关闭"
+    "close": "关闭",
+    "notAvailable": "暂无",
+    "unknown": "未知",
+    "active": "活跃",
+    "online": "在线",
+    "total": "总计"
   },
   "login": {
     "title": "登录",
@@ -41,6 +46,34 @@
     "title": "主页面",
     "welcome": "欢迎,",
     "userInfo": "用户信息",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "profile": {
+      "accountStatus": "账户状态",
+      "lastLogin": "最后登录",
+      "joinDate": "加入日期",
+      "platform": "平台",
+      "bio": "个人简介",
+      "friends": "好友"
+    },
+    "security": {
+      "title": "安全与验证",
+      "emailVerified": "邮箱已验证",
+      "emailNotVerified": "邮箱未验证",
+      "twoFactorEnabled": "双因素验证已启用",
+      "twoFactorDisabled": "双因素验证已禁用",
+      "ageVerified": "年龄已验证"
+    }
+  },
+  "friend": {
+    "title": "好友",
+    "searchPlaceholder": "搜索好友...",
+    "status": {
+      "online": "在线",
+      "active": "活跃",
+      "offline": "离线",
+      "unknown": "未知"
+    },
+    "noSearchResults": "没有找到匹配的好友",
+    "noFriends": "暂无好友"
   }
 }
