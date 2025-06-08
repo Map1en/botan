@@ -61,8 +61,13 @@ pub async fn auth_login_and_get_current_user(
                         Ok(token) => {
                             println!("token result: {:?}", token.clone());
                             let pipeline_handler = pipeline::PipelineHandler::new();
-                            let _ = pipeline_handler.listen(&token.token).await;
-                            // return ApiResponse::success(token.token, None);
+                            if let Err(e) = pipeline_handler.listen(&token.token).await {
+                                log::error!("Pipeline listener failed to start: {}", e);
+                            }
+                            return ApiResponse::success(
+                                user_or_2fa,
+                                Some("Login successful".to_string()),
+                            );
                         }
                         Err(e) => {
                             log::error!("Pipeline auth failed: {:?}", e);

@@ -1,8 +1,14 @@
 use anyhow::Result;
 use futures_util::StreamExt;
+use reqwest::header::{HeaderValue, USER_AGENT};
 use serde_json::Value;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{client::IntoClientRequest, Message},
+};
 use url::Url;
+
+use crate::client;
 
 pub struct PipelineHandler {}
 
@@ -15,9 +21,15 @@ impl PipelineHandler {
         let url_str = format!("wss://pipeline.vrchat.cloud/?authToken={}", auth_token);
         let _url = Url::parse(&url_str)?;
 
+        let mut request = url_str.clone().into_client_request()?;
+
+        let user_agent_value = client::GLOBAL_USER_AGENT.clone();
+        request
+            .headers_mut()
+            .insert(USER_AGENT, HeaderValue::from_str(&user_agent_value)?);
         println!("Connect Pipeline...");
-        println!("token: {}", url_str);
-        let (ws_stream, response) = connect_async(url_str).await?;
+        println!("token: {}", url_str.clone());
+        let (ws_stream, response) = connect_async(request).await?;
         println!("Connect Successful HTTP Response: {}", response.status());
         println!("-----------------------------------------");
 
@@ -58,6 +70,7 @@ impl PipelineHandler {
 
             println!("\n[event type]: {}", event_type);
             println!("[event content]:\n{:#?}", final_content);
+            println!("new event")
         }
         Ok(())
     }

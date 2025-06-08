@@ -7,6 +7,9 @@ use vrchatapi::apis::Error;
 pub static GLOBAL_API_CLIENT: LazyLock<RwLock<VrcApiClient>> =
     LazyLock::new(|| RwLock::new(VrcApiClient::new()));
 
+pub static GLOBAL_USER_AGENT: LazyLock<String> =
+    LazyLock::new(|| format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+
 pub struct VrcApiClient {
     pub config: Configuration,
 }
@@ -14,10 +17,8 @@ pub struct VrcApiClient {
 impl Default for VrcApiClient {
     fn default() -> Self {
         let mut config = Configuration::default();
-        const PKG_NAME: &str = env!("CARGO_PKG_NAME");
-        const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-        config.user_agent = Some(format!("{}/{}", PKG_NAME, PKG_VERSION));
+        config.user_agent = Some(GLOBAL_USER_AGENT.clone());
 
         Self { config }
     }
