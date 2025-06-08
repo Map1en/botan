@@ -15,7 +15,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useFriendStore, Friend, FriendState } from '../store/friendStore';
 import { useClientTranslations } from '../hooks/useClientTranslations';
 import { useTheme } from '../../theme/ThemeContext';
