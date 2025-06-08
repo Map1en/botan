@@ -16,9 +16,10 @@ pub struct VrcApiClient {
 
 impl Default for VrcApiClient {
     fn default() -> Self {
-        let mut config = Configuration::default();
-
-        config.user_agent = Some(GLOBAL_USER_AGENT.clone());
+        let config = Configuration {
+            user_agent: Some(GLOBAL_USER_AGENT.clone()),
+            ..Default::default()
+        };
 
         Self { config }
     }
