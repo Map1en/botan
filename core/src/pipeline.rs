@@ -1,3 +1,5 @@
+use chrono::Local;
+
 use anyhow::Result;
 use futures_util::StreamExt;
 use reqwest::header::{HeaderValue, USER_AGENT};
@@ -68,9 +70,12 @@ impl PipelineHandler {
                 content_value.clone()
             };
 
-            println!("\n[event type]: {}", event_type);
             println!("[event content]:\n{:#?}", final_content);
-            println!("new event")
+            println!(
+                "\n[event type]: {}, {:?}",
+                event_type,
+                Local::now().format("%H:%M:%S")
+            );
         }
         Ok(())
     }
