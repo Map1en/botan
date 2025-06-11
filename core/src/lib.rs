@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod client;
+pub mod conversions;
 pub mod entities;
 pub mod models;
 mod pipeline;
