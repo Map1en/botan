@@ -1,6 +1,6 @@
-use botan_core::auth;
 use botan_core::models::{EitherTwoFactorAuthCodeType, LoginCredentials};
 use botan_core::vrchatapi_models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode};
+use botan_core::{auth, database}; // 新增 database
 use dotenv::dotenv;
 
 #[tokio::main]
@@ -11,6 +11,12 @@ async fn main() {
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("Failed to install rustls crypto provider");
+
+    if let Err(e) = database::init_database().await {
+        log::error!("Failed to initialize database: {}", e);
+        std::process::exit(1);
+    }
+    println!("Database initialized successfully");
 
     let username = std::env::var("USERNAME").expect("NO USERNAME");
     let password = std::env::var("PASSWORD").expect("NO PASSWORD");

@@ -1,3 +1,5 @@
+use crate::client;
+use crate::services::event_service;
 use anyhow::Result;
 use chrono::{DateTime, Local, Utc};
 use futures_util::StreamExt;
@@ -12,8 +14,6 @@ use tokio_tungstenite::{
     tungstenite::{client::IntoClientRequest, Message},
 };
 use url::Url;
-
-use crate::client;
 
 pub struct PipelineHandler {}
 
@@ -73,14 +73,16 @@ impl PipelineHandler {
                 content_value.clone()
             };
 
+            println!("\n[event type]: {}", event_type);
             println!("[event content]:\n{:#?}", final_content);
-            println!(
-                "\n[event type]: {}, {:?}",
-                event_type,
-                Local::now().format("%H:%M:%S")
-            );
+            println!("Received at: {:?}", Local::now().format("%H:%M:%S"));
 
-            // save to db
+            if let Err(e) = event_service::process_websocket_event(event_type, &final_content).await
+            {
+                log::error!("Failed to process event {}: {}", event_type, e);
+            } else {
+                log::info!("Event {} processed and saved to database", event_type);
+            }
         }
         Ok(())
     }
