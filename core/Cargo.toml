@@ -26,3 +26,4 @@ sea-orm = { version = "1.1.12", features = [
 chrono = { version = "0.4.41", features = ["serde"] }
 anyhow = "1.0.98"
 url = "2.5.4"
+migration = { version = "0.1.0", path = "migration" }

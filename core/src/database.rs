@@ -1,3 +1,4 @@
+use migration::{Migrator, MigratorTrait};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
@@ -39,6 +40,8 @@ pub async fn init_database() -> Result<(), DbErr> {
             return Err(e);
         }
     }
+
+    Migrator::up(&db, None).await?;
 
     {
         let mut global_db = GLOBAL_DB_CONNECTION.write().await;

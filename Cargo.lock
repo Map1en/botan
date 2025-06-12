@@ -649,6 +649,7 @@ dependencies = [
  "futures-util",
  "log",
  "magic-crypt",
+ "migration",
  "percent-encoding",
  "reqwest",
  "reqwest_cookie_store",
