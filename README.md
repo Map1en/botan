@@ -1,7 +1,8 @@
 ## Botan
+This is a VRChat tool. 
+> It's my very first project from learning and writing in `Rust`.
 
-- This is an experimental VRChat-related repository.
-
-- I need to learn a lot, so this will take a long time to develop.
-
-> I'm just trying to learn how to write this
+### Features
+- GUI: Built with `Tauri`.
+- Core: Written in `Rust`.
+- Worker: A separate module. It runs the `Core` on its own.
