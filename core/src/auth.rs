@@ -2,9 +2,14 @@ use crate::client::{create_error_response, GLOBAL_API_CLIENT};
 use crate::models::response::ApiResponse;
 use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVerifyResult};
 use crate::pipeline;
+use std::sync::LazyLock;
+use tokio::sync::RwLock;
 use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
 pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
+
+pub static GLOBAL_PIPELINE_MANAGER: LazyLock<RwLock<Option<pipeline::PipelineManager>>> =
+    LazyLock::new(|| RwLock::new(None));
 
 pub async fn auth_login_and_get_current_user(
     credentials: &Option<LoginCredentials>,
@@ -60,19 +65,23 @@ pub async fn auth_login_and_get_current_user(
                     match pipeline_auth().await {
                         Ok(token) => {
                             println!("token result: {:?}", token.clone());
-                            let pipeline_handler = pipeline::PipelineHandler::new();
-                            if let Err(e) = pipeline_handler.listen(&token.token).await {
-                                log::error!("Pipeline listener failed to start: {}", e);
+
+                            let mut manager = pipeline::PipelineManager::new(token.token.clone());
+                            manager.start().await;
+
+                            {
+                                let mut global_manager = GLOBAL_PIPELINE_MANAGER.write().await;
+                                *global_manager = Some(manager);
                             }
-                            return ApiResponse::success(
-                                user_or_2fa,
-                                Some("Login successful".to_string()),
-                            );
+
+                            println!("Pipeline service started");
                         }
                         Err(e) => {
                             log::error!("Pipeline auth failed: {:?}", e);
                         }
                     }
+
+                    return ApiResponse::success(user_or_2fa, Some("Login successful".to_string()));
                 }
                 vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(u) => {
                     log::info!("2FA required: {:?}", u);

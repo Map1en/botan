@@ -1,9 +1,12 @@
-use chrono::Local;
-
 use anyhow::Result;
+use chrono::{DateTime, Local, Utc};
 use futures_util::StreamExt;
 use reqwest::header::{HeaderValue, USER_AGENT};
 use serde_json::Value;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::{mpsc, RwLock};
+use tokio::time::sleep;
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, Message},
@@ -45,7 +48,7 @@ impl PipelineHandler {
                     }
                 }
                 Err(e) => {
-                    eprintln!("need reconnect: {}", e);
+                    eprintln!("Connection error: {}", e);
                     break;
                 }
             }
@@ -76,7 +79,107 @@ impl PipelineHandler {
                 event_type,
                 Local::now().format("%H:%M:%S")
             );
+
+            // save to db
         }
         Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct PipelineStatus {
+    pub connected: bool,
+    pub last_message_time: Option<DateTime<Utc>>,
+    pub reconnect_count: u32,
+}
+
+pub struct PipelineManager {
+    auth_token: String,
+    status: Arc<RwLock<PipelineStatus>>,
+    shutdown_sender: Option<mpsc::UnboundedSender<()>>,
+}
+
+impl PipelineManager {
+    pub fn new(auth_token: String) -> Self {
+        Self {
+            auth_token,
+            status: Arc::new(RwLock::new(PipelineStatus {
+                connected: false,
+                last_message_time: None,
+                reconnect_count: 0,
+            })),
+            shutdown_sender: None,
+        }
+    }
+
+    pub async fn start(&mut self) {
+        let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel();
+        self.shutdown_sender = Some(shutdown_tx);
+
+        let auth_token = self.auth_token.clone();
+        let status = self.status.clone();
+
+        tokio::spawn(async move {
+            let mut reconnect_count = 0;
+            let max_retries = 50;
+
+            loop {
+                if let Ok(_) = shutdown_rx.try_recv() {
+                    println!("Pipeline manager received shutdown signal");
+                    break;
+                }
+
+                println!(
+                    "Starting pipeline connection attempt {}...",
+                    reconnect_count + 1
+                );
+
+                {
+                    let mut status_guard = status.write().await;
+                    status_guard.connected = false;
+                    status_guard.reconnect_count = reconnect_count;
+                }
+
+                let handler = PipelineHandler::new();
+                match handler.listen(&auth_token).await {
+                    Ok(_) => {
+                        println!("Pipeline connection ended normally");
+                        reconnect_count = 0;
+                        println!("Reconnecting pipeline in 5 seconds...");
+                        sleep(Duration::from_secs(5)).await;
+                    }
+                    Err(e) => {
+                        reconnect_count += 1;
+                        eprintln!(
+                            "Pipeline connection failed (attempt {}/{}): {}",
+                            reconnect_count, max_retries, e
+                        );
+
+                        if reconnect_count >= max_retries {
+                            eprintln!("Pipeline max retries exceeded, but this is a service, so we'll keep trying...");
+                            reconnect_count = 0;
+                        }
+
+                        let delay = Duration::from_secs(2u64.pow(reconnect_count.min(5)));
+                        println!("Reconnecting pipeline in {:?}...", delay);
+                        sleep(delay).await;
+                    }
+                }
+            }
+
+            println!("Pipeline manager shut down");
+        });
+
+        println!("Pipeline manager started in background");
+    }
+
+    pub async fn get_status(&self) -> PipelineStatus {
+        self.status.read().await.clone()
+    }
+
+    pub async fn shutdown(&mut self) {
+        if let Some(sender) = &self.shutdown_sender {
+            let _ = sender.send(());
+        }
     }
 }
