@@ -15,6 +15,9 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Users::Username).string())
                     .col(ColumnDef::new(Users::DisplayName).string().not_null())
                     .col(ColumnDef::new(Users::Bio).text().not_null())
+                    .col(ColumnDef::new(Users::IsFriend).boolean().not_null())
+                    .col(ColumnDef::new(Users::LastLogin).string().not_null())
+                    .col(ColumnDef::new(Users::Pronouns).string().not_null())
                     .col(ColumnDef::new(Users::Status).string().not_null())
                     .col(ColumnDef::new(Users::StatusDescription).text().not_null())
                     .col(ColumnDef::new(Users::ProfilePicOverride).text())
@@ -178,6 +181,9 @@ enum Users {
     Username,
     DisplayName,
     Bio,
+    IsFriend,
+    LastLogin,
+    Pronouns,
     Status,
     StatusDescription,
     ProfilePicOverride,

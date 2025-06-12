@@ -20,6 +20,9 @@ pub async fn upsert_user(api_user: &User) -> Result<users::Model, DbErr> {
                     users::Column::Bio,
                     users::Column::Status,
                     users::Column::StatusDescription,
+                    users::Column::IsFriend,
+                    users::Column::LastLogin,
+                    users::Column::Pronouns,
                 ])
                 .to_owned(),
         )

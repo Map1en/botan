@@ -12,6 +12,9 @@ pub struct Model {
     pub display_name: String,
     #[sea_orm(column_type = "Text")]
     pub bio: String,
+    pub is_friend: bool,
+    pub last_login: String,
+    pub pronouns: String,
     pub status: String,
     #[sea_orm(column_type = "Text")]
     pub status_description: String,
