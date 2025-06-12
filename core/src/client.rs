@@ -1,6 +1,5 @@
 use crate::models::response::ApiResponse;
 use std::sync::{LazyLock, RwLock};
-pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::configuration::Configuration;
 use vrchatapi::apis::Error;
 

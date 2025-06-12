@@ -1,8 +1,7 @@
-use vrchatapi::models::User;
-
 use crate::entities::users;
 use sea_orm::entity::*;
 use serde::Deserialize;
+use vrchatapi::models::User;
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", content = "content")]

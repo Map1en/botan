@@ -4,8 +4,6 @@ use crate::models::{EitherTwoFactorAuthCodeType, LoginCredentials, TwoFactorVeri
 use crate::pipeline;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
-use vrchatapi::apis::authentication_api::{get_current_user, VerifyAuthTokenError};
-pub use vrchatapi::apis::configuration::BasicAuth;
 use vrchatapi::apis::Error;
 
 pub static GLOBAL_PIPELINE_MANAGER: LazyLock<RwLock<Option<pipeline::PipelineManager>>> =
@@ -50,7 +48,7 @@ pub async fn auth_login_and_get_current_user(
             client.config.clone()
         };
 
-        match get_current_user(&client_config).await {
+        match vrchatapi::apis::authentication_api::get_current_user(&client_config).await {
             Ok(user_or_2fa) => match &user_or_2fa {
                 vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(current_user) => {
                     println!("Login successful for user: {}", current_user.display_name);
@@ -189,8 +187,10 @@ pub async fn auth_verify2_fa(
     }
 }
 
-pub async fn verify_auth(
-) -> Result<vrchatapi::models::VerifyAuthTokenResult, Error<VerifyAuthTokenError>> {
+pub async fn verify_auth() -> Result<
+    vrchatapi::models::VerifyAuthTokenResult,
+    Error<vrchatapi::apis::authentication_api::VerifyAuthTokenError>,
+> {
     let client_config = {
         let client = GLOBAL_API_CLIENT.read().unwrap();
         client.config.clone()
@@ -205,8 +205,10 @@ pub async fn verify_auth(
     }
 }
 
-pub async fn pipeline_auth(
-) -> Result<vrchatapi::models::VerifyAuthTokenResult, Error<VerifyAuthTokenError>> {
+pub async fn pipeline_auth() -> Result<
+    vrchatapi::models::VerifyAuthTokenResult,
+    Error<vrchatapi::apis::authentication_api::VerifyAuthTokenError>,
+> {
     let client_config = {
         let client = GLOBAL_API_CLIENT.read().unwrap();
         client.config.clone()

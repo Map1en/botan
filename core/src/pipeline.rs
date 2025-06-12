@@ -124,7 +124,7 @@ impl PipelineManager {
             let max_retries = 50;
 
             loop {
-                if let Ok(_) = shutdown_rx.try_recv() {
+                if shutdown_rx.try_recv().is_ok() {
                     println!("Pipeline manager received shutdown signal");
                     break;
                 }
