@@ -31,6 +31,7 @@ WORKDIR /app
 COPY --from=builder /usr/src/app/target/release/botan_worker /usr/local/bin/botan_worker
 
 RUN mkdir -p /app/data
-VOLUME /app/data
+
+VOLUME ["/app/data"]
 
 ENTRYPOINT ["/usr/local/bin/botan_worker"]

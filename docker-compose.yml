@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: botan_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-botan}
+      POSTGRES_USER: ${POSTGRES_USER:-botan_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-botan_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - botan_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-botan_user} -d ${POSTGRES_DB:-botan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  botan_worker:
+    build: .
+    container_name: botan_worker
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-botan}
+      POSTGRES_USER: ${POSTGRES_USER:-botan_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-botan_password}
+
+      USERNAME: "${USERNAME}"
+      PASSWORD: "${PASSWORD}"
+      VRC_2FA_CODE: "${VRC_2FA_CODE:-}"
+      VRC_2FA_TYPE: "${VRC_2FA_TYPE:-2fa}"
+
+      RUST_LOG: "${RUST_LOG:-info}"
+
+      DATA_DIR: "/app/data"
+      COOKIES_PATH: "/app/cookies.json"
+    volumes:
+      - botan_data:/app/data
+      - ./cookies.json:/app/cookies.json:rw
+    networks:
+      - botan_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  botan_data:
+    driver: local
+
+networks:
+  botan_network:
+    driver: bridge

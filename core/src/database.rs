@@ -7,18 +7,44 @@ pub static GLOBAL_DB_CONNECTION: LazyLock<RwLock<Option<DatabaseConnection>>> =
 
 pub async fn init_database() -> Result<(), DbErr> {
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://./botan.db?mode=rwc".to_string());
+        .or_else(|_| -> Result<String, std::env::VarError> {
+            let db_host =
+                std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".to_string());
+            let db_port = std::env::var("POSTGRES_PORT").unwrap_or_else(|_| "5432".to_string());
+            let db_name = std::env::var("POSTGRES_DB").unwrap_or_else(|_| "botan".to_string());
+            let db_user =
+                std::env::var("POSTGRES_USER").unwrap_or_else(|_| "botan_user".to_string());
+            let db_password =
+                std::env::var("POSTGRES_PASSWORD").unwrap_or_else(|_| "botan_password".to_string());
 
-    log::info!("Connecting to database: {}", database_url);
+            Ok(format!(
+                "postgresql://{}:{}@{}:{}/{}",
+                db_user, db_password, db_host, db_port, db_name
+            ))
+        })
+        .unwrap_or_else(|_| {
+            log::warn!("No database configuration found, using SQLite as fallback");
+            // rm
+            "sqlite://./botan.db?mode=rwc".to_string()
+        });
+
+    log::info!("Connecting to database: {}", &database_url);
 
     let db = Database::connect(&database_url).await?;
+
+    match db.ping().await {
+        Ok(_) => log::info!("Database connection established and tested"),
+        Err(e) => {
+            log::error!("Database connection test failed: {}", e);
+            return Err(e);
+        }
+    }
 
     {
         let mut global_db = GLOBAL_DB_CONNECTION.write().await;
         *global_db = Some(db);
     }
 
-    log::info!("Database connection established");
     Ok(())
 }
 

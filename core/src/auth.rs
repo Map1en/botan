@@ -9,13 +9,24 @@ use vrchatapi::apis::Error;
 pub static GLOBAL_PIPELINE_MANAGER: LazyLock<RwLock<Option<pipeline::PipelineManager>>> =
     LazyLock::new(|| RwLock::new(None));
 
+fn get_cookies_path() -> String {
+    std::env::var("COOKIES_PATH").unwrap_or_else(|_| {
+        if std::path::Path::new("/app/cookies.json").exists() {
+            "/app/cookies.json".to_string()
+        } else {
+            "./cookies.json".to_string()
+        }
+    })
+}
+
 pub async fn auth_login_and_get_current_user(
     credentials: &Option<LoginCredentials>,
     is_first_login: &Option<bool>,
 ) -> ApiResponse<vrchatapi::models::EitherUserOrTwoFactor> {
     let cookie_store_arc = if let Some(true) = is_first_login {
+        let cookies_path = get_cookies_path();
         let cookie_store = {
-            if let Ok(file) = std::fs::File::open("cookies.json") {
+            if let Ok(file) = std::fs::File::open(&cookies_path) {
                 let reader = std::io::BufReader::new(file);
                 serde_json::from_reader(reader)
                     .unwrap_or_else(|_| reqwest_cookie_store::CookieStore::new(None))
