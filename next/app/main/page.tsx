@@ -24,6 +24,7 @@ import DraggableFloatingBox, {
 } from '../components/FriendBox';
 import FriendList from '../components/FriendList';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import FriendsPage from '../components/FriendsPage';
 
 export default function MainPage() {
   const { t } = useClientTranslations();
@@ -267,6 +268,8 @@ export default function MainPage() {
           </Paper>
         )}
       </div>
+
+      <FriendsPage />
       {/* 改设计了，暂时不显示 */}
       {/* {!showFloatingBox && (
         <FloatingActionButton onClick={() => setShowFloatingBox(true)} />

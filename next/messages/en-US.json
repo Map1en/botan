@@ -65,15 +65,25 @@
     }
   },
   "friend": {
-    "title": "Friends",
+    "title": "Friends Center",
     "searchPlaceholder": "Search friends...",
+    "filter": "Filter",
+    "categories": {
+      "online": "Online Friends",
+      "active": "Active Friends",
+      "offline": "Offline Friends"
+    },
     "status": {
       "online": "Online",
       "active": "Active",
       "offline": "Offline",
       "unknown": "Unknown"
     },
-    "noSearchResults": "No matching friends found",
-    "noFriends": "No friends"
+    "pendingOffline": "Pending Offline",
+    "actions": {
+      "interact": "Interact",
+      "invite": "Invite",
+      "join": "Join"
+    }
   }
 }

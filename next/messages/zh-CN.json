@@ -65,15 +65,25 @@
     }
   },
   "friend": {
-    "title": "好友",
+    "title": "好友中心",
     "searchPlaceholder": "搜索好友...",
+    "filter": "筛选",
+    "categories": {
+      "online": "在线好友",
+      "active": "活跃好友",
+      "offline": "离线好友"
+    },
     "status": {
       "online": "在线",
       "active": "活跃",
       "offline": "离线",
       "unknown": "未知"
     },
-    "noSearchResults": "没有找到匹配的好友",
-    "noFriends": "暂无好友"
+    "pendingOffline": "即将离线",
+    "actions": {
+      "interact": "互动",
+      "invite": "邀请",
+      "join": "加入"
+    }
   }
 }
