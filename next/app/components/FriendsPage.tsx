@@ -87,6 +87,7 @@ function FriendCard({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        width: '280px',
         border: '1px solid',
         borderColor: mode === 'dark' ? '#374151' : '#e5e7eb',
         transition: 'all 0.2s ease-in-out',
